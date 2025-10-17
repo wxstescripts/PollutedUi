@@ -1,25 +1,22 @@
 -- ICON: https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json -
 
 local Library = {}
-
-local Twen = game:GetService('TweenService');
-local Input = game:GetService('UserInputService');
-local TextServ = game:GetService('TextService');
-local LocalPlayer = game:GetService('Players').LocalPlayer;
-local CoreGui = (gethui and gethui()) or game:FindFirstChild('CoreGui') or LocalPlayer.PlayerGui;
+local CoreGui = game:GetService("CoreGui")
+local Twen = game:GetService('TweenService')
+local Input = game:GetService('UserInputService')
+local TextServ = game:GetService('TextService')
+local LocalPlayer = game:GetService('Players').LocalPlayer
+local CoreGui = (gethui and gethui()) or game:FindFirstChild('CoreGui') or LocalPlayer.PlayerGui
 local Icons = (function()
-	local p,c = pcall(function()
-		local Http = game:HttpGetAsync('https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json');
+	local p, c = pcall(function()
+		local Http = game:HttpGetAsync('https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json')
+		local Decode = game:GetService('HttpService'):JSONDecode(Http)
+		return Decode['icon']
+	end)
 
-		local Decode = game:GetService('HttpService'):JSONDecode(Http);
-
-		return Decode['icon'];
-	end);
-
-	if p then return c end;
-
-	return nil;
-end)() or {};
+	if p then return c end
+	return nil
+end)() or {}
 
 local ElBlurSource = function()
 				local success, err = pcall(function()
@@ -215,8 +212,6 @@ local Config = function(data,default)
 	return data;
 end;
 
-local Library = {};
-
 Library['.'] = '1';
 Library['FetchIcon'] = "https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json";
 
@@ -224,7 +219,7 @@ pcall(function()
 	Library['Icons'] = game:GetService('HttpService'):JSONDecode(game:HttpGetAsync(Library.FetchIcon))['icons'];
 end)
 
-function Library.GradientImage(E : Frame , Color)
+Library.GradientImage = function(E : Frame , Color)
 	local GLImage = Instance.new("ImageLabel")
 	local upd = tick();
 	local nextU , Speed , speedy , SIZ = 4 , 5 , -5 , 0.8;
@@ -284,7 +279,7 @@ function Library.GradientImage(E : Frame , Color)
 	return str
 end;
 
-function Library.new(config)
+Library.new = function(config)
 	local success, result = pcall(function()
 		config = Config(config,{
 			Title = "UI Library",
@@ -2877,7 +2872,7 @@ end;
 
 Library.NewAuth = function(conf)
 	conf = Config(conf,{
-		Title = "Nothing $ KEY SYSTEM",
+		Title = "Polluted $ KEY SYSTEM",
 		GetKey = function() return 'https://example.com' end,
 		Auth = function(key) if key == '1 or 1' then return key; end; end,
 		Freeze = false,
@@ -3455,9 +3450,8 @@ function Library:Console()
 	Terminal.Name = "RobloxDevGui"
 	Terminal.Parent = CoreGui
 	Terminal.ResetOnSpawn = false
-	Terminal.ZIndexBehavior = Enum.ZIndexBehavior.Global;
-
-	Terminal.IgnoreGuiInset = true;
+	Terminal.ZIndexBehavior = Enum.ZIndexBehavior.Global
+	Terminal.IgnoreGuiInset = true
 
 	MFrame.Name = "MFrame"
 	MFrame.Parent = Terminal
@@ -3870,8 +3864,5 @@ function Library:Console()
 	return overview;
 end;
 
-print('[ OK ]: Fetch Nothing Library')
-
-return table.freeze(Library);
-
-return Library;
+print("[ OK ]: Fetch Polluted Library")
+return table.freeze(Library)
