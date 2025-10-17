@@ -6,7 +6,7 @@
   
 ## Require Library
 ```lua
-local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/Library.lua'))();
+local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/Library.lua'))();
 local Windows = WHATLibrary.new({
 	Title = "My Script",
 	Description = "WHAT UI Library",
@@ -159,7 +159,7 @@ InfoSection:NewButton({
 # Full Example
 
 ```lua
-local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/main/UIsrc.lua'))();
+local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/Library.lua'))();
 local Notification = WHATUiLibrary.Notification();
 
 Notification.new({
@@ -325,4 +325,5 @@ Notification.new({
 	Icon = "rbxassetid://7733993369",
 })
 ```
+
 
