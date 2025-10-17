@@ -1,4 +1,4 @@
-# WHAT
+# NOTHING
 - Smooth
 - Not lag
 - Open Source
@@ -159,7 +159,7 @@ InfoSection:NewButton({
 # Full Example
 
 ```lua
-local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/UIsrc.lua'))();
+local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/3345-c-a-t-s-u-s/NOTHING/main/source.lua'))();
 local Notification = NothingLibrary.Notification();
 
 Notification.new({
@@ -324,115 +324,4 @@ Notification.new({
 	Duration = 3;
 	Icon = "rbxassetid://7733993369",
 })
-```
-
-# NOTHING (Local Example)
-
-This example shows how to use your local UI library and 3D blur system together.
-
-```lua
--- Require the main UI library (UIsrc.lua)
-local NothingLibrary = dofile("https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/UIsrc.lua")
-
--- Require the 3D blur/part background system (UIB.lua) if you want to use it
-local GuiSystem = dofile("https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/UIB.lua")
-
--- Create a notification (optional)
-local Notification = NothingLibrary.Notification()
-Notification.new({
-    Title = "Notification",
-    Description = "Example",
-    Duration = 5,
-    Icon = "rbxassetid://8997385628"
-})
-
--- Create the main window
-local Windows = NothingLibrary.new({
-    Title = "NOTHING",
-    Description = "Nothing UI Library",
-    Keybind = Enum.KeyCode.LeftControl,
-    Logo = 'http://www.roblox.com/asset/?id=18898582662'
-})
-
--- Create a tab
-local TabFrame = Windows:NewTab({
-    Title = "Example",
-    Description = "example tab",
-    Icon = "rbxassetid://7733960981"
-})
-
--- Create sections
-local Section = TabFrame:NewSection({
-    Title = "Section",
-    Icon = "rbxassetid://7743869054",
-    Position = "Left"
-})
-
-local InfoSection = TabFrame:NewSection({
-    Title = "Information",
-    Icon = "rbxassetid://7733964719",
-    Position = "Right"
-})
-
--- Add controls (toggle, button, slider, keybind, dropdown, etc.)
-Section:NewToggle({
-    Title = "Toggle",
-    Default = false,
-    Callback = function(tr)
-        print(tr)
-    end,
-})
-
-Section:NewButton({
-    Title = "Kill All",
-    Callback = function()
-        Notification.new({
-            Title = "Killed",
-            Description = "10",
-            Duration = 5,
-            Icon = "rbxassetid://8997385628"
-        })
-        print('killed')
-    end,
-})
-
-Section:NewSlider({
-    Title = "Slider",
-    Min = 10,
-    Max = 50,
-    Default = 25,
-    Callback = function(a)
-        print(a)
-    end,
-})
-
-Section:NewKeybind({
-    Title = "Keybind",
-    Default = Enum.KeyCode.RightAlt,
-    Callback = function(a)
-        print(a)
-    end,
-})
-
-Section:NewDropdown({
-    Title = "Dropdown",
-    Data = {1,2,3,4,5},
-    Default = 1,
-    Callback = function(a)
-        print(a)
-    end,
-})
-
-InfoSection:NewTitle('UI by CATSUS')
-InfoSection:NewButton({
-    Title = "Discord",
-    Callback = function()
-        print('discord.gg/BH6pE7jesa')
-    end,
-})
-
--- If you want to use the 3D blur/part background on a frame:
--- local blurObj = GuiSystem.new(YourFrame)
--- blurObj.Update() -- to manually update
--- blurObj.Destroy() -- to clean up
 ```
