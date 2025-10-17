@@ -1,5 +1,7 @@
 -- ICON: https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json -
 
+local Library = {}
+
 local Twen = game:GetService('TweenService');
 local Input = game:GetService('UserInputService');
 local TextServ = game:GetService('TextService');
@@ -3871,3 +3873,5 @@ end;
 print('[ OK ]: Fetch Nothing Library')
 
 return table.freeze(Library);
+
+return Library;
