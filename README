@@ -1,4 +1,4 @@
-# NOTHING
+# WHAT
 - Smooth
 - Not lag
 - Open Source
@@ -6,7 +6,7 @@
   
 ## Require Library
 ```lua
-local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/3345-c-a-t-s-u-s/NOTHING/main/source.lua'))();
+local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/UIsrc.lua'))();
 local Windows = NothingLibrary.new({
 	Title = "NOTHING",
 	Description = "Nothing UI Library",
@@ -159,7 +159,7 @@ InfoSection:NewButton({
 # Full Example
 
 ```lua
-local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/3345-c-a-t-s-u-s/NOTHING/main/source.lua'))();
+local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/UIsrc.lua'))();
 local Notification = NothingLibrary.Notification();
 
 Notification.new({
@@ -332,10 +332,10 @@ This example shows how to use your local UI library and 3D blur system together.
 
 ```lua
 -- Require the main UI library (UIsrc.lua)
-local NothingLibrary = dofile("c:/Users/heckz/OneDrive/Desktop/Roblox Scripts/Custom Uis/UIsrc.lua")
+local NothingLibrary = dofile("https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/UIsrc.lua")
 
 -- Require the 3D blur/part background system (UIB.lua) if you want to use it
-local GuiSystem = dofile("c:/Users/heckz/OneDrive/Desktop/Roblox Scripts/Custom Uis/UIB.lua")
+local GuiSystem = dofile("https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/UIB.lua")
 
 -- Create a notification (optional)
 local Notification = NothingLibrary.Notification()
