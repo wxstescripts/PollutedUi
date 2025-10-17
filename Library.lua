@@ -1,219 +1,185 @@
--- ICON: https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json -
+-- ICON: https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json
 
 local Library = {}
 local CoreGui = game:GetService("CoreGui")
-local Twen = game:GetService('TweenService')
+local TweenService = game:GetService('TweenService')
 local Input = game:GetService('UserInputService')
-local TextServ = game:GetService('TextService')
+local TextService = game:GetService('TextService')
 local LocalPlayer = game:GetService('Players').LocalPlayer
 local CoreGui = (gethui and gethui()) or game:FindFirstChild('CoreGui') or LocalPlayer.PlayerGui
+
+-- Config function must be defined BEFORE usage
+local function Config(data, default)
+    data = data or {}
+    for i,v in next, default do
+        data[i] = data[i] or v
+    end
+    return data
+end
+
+-- Load icons safely
 local Icons = (function()
-	local p, c = pcall(function()
-		local Http = game:HttpGetAsync('https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json')
-		local Decode = game:GetService('HttpService'):JSONDecode(Http)
-		return Decode['icon']
-	end)
+    local ok, result = pcall(function()
+        local http = game:HttpGetAsync('https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json')
+        local decode = game:GetService('HttpService'):JSONDecode(http)
+        return decode['icon']
+    end)
+    if ok then return result end
+    return {}
+end)()
 
-	if p then return c end
-	return nil
-end)() or {}
+-- ElBlurSource function (Textbox)
+local function ElBlurSource(parentSection, conf)
+    conf = Config(conf, {
+        Title = "Textbox",
+        Default = '',
+        FileType = "",
+        Callback = function(a) end,
+    })
 
-local ElBlurSource = function()
-				local success, err = pcall(function()
-					conf = Config(conf,{
-						Title = "Textbox",
-						Default = '',
-						FileType = "",
-						Callback = function(a)
+    local success, err = pcall(function()
+        -- Main frame
+        local FunctionTextbox = Instance.new("Frame")
+        FunctionTextbox.Name = "FunctionTextbox"
+        FunctionTextbox.Parent = parentSection
+        FunctionTextbox.BackgroundColor3 = Color3.fromRGB(17, 17, 17)
+        FunctionTextbox.BackgroundTransparency = 0.8
+        FunctionTextbox.BorderSizePixel = 0
+        FunctionTextbox.Size = UDim2.new(0.95, 0, 0.5, 0)
+        FunctionTextbox.ZIndex = 17
 
-						end,
-					})
+        local UIAspectRatioConstraint = Instance.new("UIAspectRatioConstraint")
+        UIAspectRatioConstraint.Parent = FunctionTextbox
+        UIAspectRatioConstraint.AspectRatio = 5
+        UIAspectRatioConstraint.AspectType = Enum.AspectType.ScaleWithParentSize
 
-					local FunctionTextbox = Instance.new("Frame")
-					local UIAspectRatioConstraint = Instance.new("UIAspectRatioConstraint")
-					local TextInt = Instance.new("TextLabel")
-					local UIGradient = Instance.new("UIGradient")
-					local UIStroke = Instance.new("UIStroke")
-					local UICorner = Instance.new("UICorner")
-					local MFrame = Instance.new("Frame")
-					local UICorner_2 = Instance.new("UICorner")
-					local UIStroke_2 = Instance.new("UIStroke")
-					local FileType = Instance.new("TextLabel")
-					local UIGradient_2 = Instance.new("UIGradient")
-					local TextBox = Instance.new("TextBox")
-					local Button = Instance.new("TextButton")
+        local TextInt = Instance.new("TextLabel")
+        TextInt.Name = "TextInt"
+        TextInt.Parent = FunctionTextbox
+        TextInt.AnchorPoint = Vector2.new(0.5, 0.5)
+        TextInt.BackgroundTransparency = 1
+        TextInt.Position = UDim2.new(0.5, 0, 0.2, 0)
+        TextInt.Size = UDim2.new(0.95, 0, 0.32, 0)
+        TextInt.ZIndex = 18
+        TextInt.Font = Enum.Font.GothamBold
+        TextInt.Text = conf.Title
+        TextInt.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TextInt.TextScaled = true
+        TextInt.TextTransparency = 0.25
+        TextInt.TextWrapped = true
+        TextInt.TextXAlignment = Enum.TextXAlignment.Left
 
-					FunctionTextbox.Name = "FunctionTextbox"
-					FunctionTextbox.Parent = Section
-					FunctionTextbox.BackgroundColor3 = Color3.fromRGB(17, 17, 17)
-					FunctionTextbox.BackgroundTransparency = 0.800
-					FunctionTextbox.BorderColor3 = Color3.fromRGB(0, 0, 0)
-					FunctionTextbox.BorderSizePixel = 0
-					FunctionTextbox.Size = UDim2.new(0.949999988, 0, 0.5, 0)
-					FunctionTextbox.ZIndex = 17
+        local UIGradient = Instance.new("UIGradient")
+        UIGradient.Rotation = 90
+        UIGradient.Transparency = NumberSequence.new{
+            NumberSequenceKeypoint.new(0,0),
+            NumberSequenceKeypoint.new(0.84,0.25),
+            NumberSequenceKeypoint.new(1,1)
+        }
+        UIGradient.Parent = TextInt
 
-					UIAspectRatioConstraint.Parent = FunctionTextbox
-					UIAspectRatioConstraint.AspectRatio = 5.000
-					UIAspectRatioConstraint.AspectType = Enum.AspectType.ScaleWithParentSize
+        local UIStroke = Instance.new("UIStroke")
+        UIStroke.Transparency = 0.95
+        UIStroke.Color = Color3.fromRGB(255, 255, 255)
+        UIStroke.Parent = FunctionTextbox
 
-					TextInt.Name = "TextInt"
-					TextInt.Parent = FunctionTextbox
-					TextInt.AnchorPoint = Vector2.new(0.5, 0.5)
-					TextInt.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-					TextInt.BackgroundTransparency = 1.000
-					TextInt.BorderColor3 = Color3.fromRGB(0, 0, 0)
-					TextInt.BorderSizePixel = 0
-					TextInt.Position = UDim2.new(0.5, 0, 0.200000003, 0)
-					TextInt.Size = UDim2.new(0.949999988, 0, 0.319999993, 0)
-					TextInt.ZIndex = 18
-					TextInt.Font = Enum.Font.GothamBold
-					TextInt.Text = conf.Title
-					TextInt.TextColor3 = Color3.fromRGB(255, 255, 255)
-					TextInt.TextScaled = true
-					TextInt.TextSize = 14.000
-					TextInt.TextTransparency = 0.250
-					TextInt.TextWrapped = true
-					TextInt.TextXAlignment = Enum.TextXAlignment.Left
+        local UICorner = Instance.new("UICorner")
+        UICorner.CornerRadius = UDim.new(0,2)
+        UICorner.Parent = FunctionTextbox
 
-					UIGradient.Rotation = 90
-					UIGradient.Transparency = NumberSequence.new{NumberSequenceKeypoint.new(0.00, 0.00), NumberSequenceKeypoint.new(0.84, 0.25), NumberSequenceKeypoint.new(1.00, 1.00)}
-					UIGradient.Parent = TextInt
+        -- MFrame
+        local MFrame = Instance.new("Frame")
+        MFrame.Name = "MFrame"
+        MFrame.Parent = FunctionTextbox
+        MFrame.AnchorPoint = Vector2.new(0.5,0.5)
+        MFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+        MFrame.BackgroundTransparency = 0.8
+        MFrame.BorderSizePixel = 0
+        MFrame.ClipsDescendants = true
+        MFrame.Position = UDim2.new(0.5,0,0.7,0)
+        MFrame.Size = UDim2.new(0.95,0,0.375,0)
+        MFrame.ZIndex = 18
 
-					UIStroke.Transparency = 0.950
-					UIStroke.Color = Color3.fromRGB(255, 255, 255)
-					UIStroke.Parent = FunctionTextbox
+        local UICorner_2 = Instance.new("UICorner")
+        UICorner_2.CornerRadius = UDim.new(0,2)
+        UICorner_2.Parent = MFrame
 
-					UICorner.CornerRadius = UDim.new(0, 2)
-					UICorner.Parent = FunctionTextbox
+        local UIStroke_2 = Instance.new("UIStroke")
+        UIStroke_2.Transparency = 0.975
+        UIStroke_2.Color = Color3.fromRGB(255,255,255)
+        UIStroke_2.Parent = MFrame
 
-					MFrame.Name = "MFrame"
-					MFrame.Parent = FunctionTextbox
-					MFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-					MFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-					MFrame.BackgroundTransparency = 0.800
-					MFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
-					MFrame.BorderSizePixel = 0
-					MFrame.ClipsDescendants = true
-					MFrame.Position = UDim2.new(0.5, 0, 0.699999988, 0)
-					MFrame.Size = UDim2.new(0.949999988, 0, 0.375, 0)
-					MFrame.ZIndex = 18
+        local FileType = Instance.new("TextLabel")
+        FileType.Name = "FileType"
+        FileType.Parent = MFrame
+        FileType.AnchorPoint = Vector2.new(0.5,0.5)
+        FileType.BackgroundTransparency = 1
+        FileType.Position = UDim2.new(0.5,0,0.5,0)
+        FileType.Size = UDim2.new(0.9,0,0.8,0)
+        FileType.ZIndex = 18
+        FileType.Font = Enum.Font.GothamBold
+        FileType.Text = conf.FileType
+        FileType.TextColor3 = Color3.fromRGB(255,255,255)
+        FileType.TextScaled = true
+        FileType.TextTransparency = 0.1
+        FileType.TextWrapped = true
+        FileType.TextXAlignment = Enum.TextXAlignment.Right
 
-					UICorner_2.CornerRadius = UDim.new(0, 2)
-					UICorner_2.Parent = MFrame
+        local UIGradient_2 = Instance.new("UIGradient")
+        UIGradient_2.Rotation = 90
+        UIGradient_2.Transparency = NumberSequence.new{
+            NumberSequenceKeypoint.new(0,0),
+            NumberSequenceKeypoint.new(0.84,0.25),
+            NumberSequenceKeypoint.new(1,1)
+        }
+        UIGradient_2.Parent = FileType
 
-					UIStroke_2.Transparency = 0.975
-					UIStroke_2.Color = Color3.fromRGB(255, 255, 255)
-					UIStroke_2.Parent = MFrame
+        -- TextBox
+        local TextBox = Instance.new("TextBox")
+        TextBox.Parent = MFrame
+        TextBox.AnchorPoint = Vector2.new(0.5,0.5)
+        TextBox.BackgroundTransparency = 1
+        TextBox.Position = UDim2.new(0.425,0,0.5,0)
+        TextBox.Size = UDim2.new(0.75,0,0.8,0)
+        TextBox.ClearTextOnFocus = false
+        TextBox.Font = Enum.Font.GothamBold
+        TextBox.Text = tostring(conf.Default)
+        TextBox.TextColor3 = Color3.fromRGB(255,255,255)
+        TextBox.TextScaled = true
+        TextBox.TextTransparency = 0.6
+        TextBox.TextWrapped = true
+        TextBox.TextXAlignment = Enum.TextXAlignment.Left
+        TextBox.ZIndex = 35
 
-					FileType.Name = "FileType"
-					FileType.Parent = MFrame
-					FileType.AnchorPoint = Vector2.new(0.5, 0.5)
-					FileType.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-					FileType.BackgroundTransparency = 1.000
-					FileType.BorderColor3 = Color3.fromRGB(0, 0, 0)
-					FileType.BorderSizePixel = 0
-					FileType.Position = UDim2.new(0.5, 0, 0.5, 0)
-					FileType.Size = UDim2.new(0.899999976, 0, 0.800000012, 0)
-					FileType.ZIndex = 18
-					FileType.Font = Enum.Font.GothamBold
-					FileType.Text = conf.FileType
-					FileType.TextColor3 = Color3.fromRGB(255, 255, 255)
-					FileType.TextScaled = true
-					FileType.TextSize = 14.000
-					FileType.TextTransparency = 0.100
-					FileType.TextWrapped = true
-					FileType.TextXAlignment = Enum.TextXAlignment.Right
+        -- Button overlay
+        local Button = Instance.new("TextButton")
+        Button.Name = "Button"
+        Button.Parent = FunctionTextbox
+        Button.BackgroundTransparency = 1
+        Button.Size = UDim2.new(1,0,1,0)
+        Button.ZIndex = 25
+        Button.Text = ""
 
-					UIGradient_2.Rotation = 90
-					UIGradient_2.Transparency = NumberSequence.new{NumberSequenceKeypoint.new(0.00, 0.00), NumberSequenceKeypoint.new(0.84, 0.25), NumberSequenceKeypoint.new(1.00, 1.00)}
-					UIGradient_2.Parent = FileType
+        -- Connect callback safely
+        TextBox.FocusLost:Connect(function()
+            local ok, err = pcall(function()
+                conf.Callback(TextBox.Text)
+            end)
+            if not ok then warn("Textbox callback error:", err) end
+        end)
+    end)
 
-					TextBox.Parent = MFrame
-					TextBox.AnchorPoint = Vector2.new(0.5, 0.5)
-					TextBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-					TextBox.BackgroundTransparency = 1.000
-					TextBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
-					TextBox.BorderSizePixel = 0
-					TextBox.Position = UDim2.new(0.425999999, 0, 0.5, 0)
-					TextBox.Size = UDim2.new(0.753000021, 0, 0.800000012, 0)
-					TextBox.ZIndex = 35
-					TextBox.ClearTextOnFocus = false
-					TextBox.Font = Enum.Font.GothamBold
-					TextBox.Text = tostring(conf.Default) or "";
-					TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-					TextBox.TextScaled = true
-					TextBox.TextSize = 14.000
-					TextBox.TextTransparency = 0.600
-					TextBox.TextWrapped = true
-					TextBox.TextXAlignment = Enum.TextXAlignment.Left
+    if not success then
+        warn("ElBlurSource creation failed:", err)
+    end
+end
 
-					Button.Name = "Button"
-					Button.Parent = FunctionTextbox
-					Button.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-					Button.BackgroundTransparency = 1.000
-					Button.BorderColor3 = Color3.fromRGB(0, 0, 0)
-					Button.BorderSizePixel = 0
-					Button.Size = UDim2.new(1, 0, 1, 0)
-					Button.ZIndex = 25
-					Button.Font = Enum.Font.SourceSans
-					Button.Text = "";
-					Button.TextColor3 = Color3.fromRGB(0, 0, 0)
-					Button.TextSize = 14.000
-					Button.TextTransparency = 1.000
+-- Library metadata
+Library['.'] = '1'
+Library['FetchIcon'] = "https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json"
 
-					local successFocus, errFocus = pcall(function()
-						local successFocus, errFocus = pcall(function()
-							TextBox.FocusLost:Connect(function(press)
-								local ok, err = pcall(function()
-									conf.Callback(TextBox.Text);
-								end)
-								if not ok then warn("Textbox Callback Error:", err) end
-							end)
-						end)
-						if not successFocus then warn("Textbox FocusLost Connection Error:", errFocus) end
-					end)
-					if not successFocus then warn("Textbox FocusLost Connection Error:", errFocus) end
-				end)
-				if not success then
-					warn("NewTextbox Creation Error:", err)
-					return nil
-				end
-								local pos = math.clamp((input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X, 0, 1)
-								local value = math.floor((ctfx.Min + (ctfx.Max - ctfx.Min) * pos) / ctfx.Increment + 0.5) * ctfx.Increment
-								UpdateUI(value)
-								ctfx.Callback(value)
-							end
-							moveConnection = Input.InputChanged:Connect(function(input)
-								if input.UserInputType == Enum.UserInputType.MouseMovement then
-									move(input)
-								end
-							end)
-							upConnection = Input.InputEnded:Connect(function(input)
-								if input.UserInputType == Enum.UserInputType.MouseButton1 then
-									moveConnection:Disconnect()
-									upConnection:Disconnect()
-								end
-							end)
-						end)
-					end)
-					if not successSlider then warn("SliderButton Connection Error:", errSlider) end
-				end)
-				if not success then
-					warn("NewSlider Creation Error:", err)
-					return nil
-				end
-local Config = function(data,default)
-	data = data or {};
-
-	for i,v in next,default do
-		data[i] = data[i] or v;
-	end;
-
-	return data;
-end;
-
-Library['.'] = '1';
-Library['FetchIcon'] = "https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json";
+-- Example usage:
+-- ElBlurSource(SomeParentFrame, {Title="Enter Name", Default="Player"})
 
 pcall(function()
 	Library['Icons'] = game:GetService('HttpService'):JSONDecode(game:HttpGetAsync(Library.FetchIcon))['icons'];
@@ -2872,7 +2838,7 @@ end;
 
 Library.NewAuth = function(conf)
 	conf = Config(conf,{
-		Title = "Polluted $ KEY SYSTEM",
+		Title = "Nothing $ KEY SYSTEM",
 		GetKey = function() return 'https://example.com' end,
 		Auth = function(key) if key == '1 or 1' then return key; end; end,
 		Freeze = false,
@@ -3864,5 +3830,5 @@ function Library:Console()
 	return overview;
 end;
 
-print("[ OK ]: Fetch Polluted Library")
+print("[ OK ]: Fetch Nothing Library")
 return table.freeze(Library)
