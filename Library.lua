@@ -229,7 +229,7 @@ Library.GradientImage = function(E : Frame , Color)
 		nextmain = nextmain:Lerp(UDim2.new(0.5 + (Speed / 24),0,0.5 + (speedy / 24),0) , .025)
 		int = int + 0.1
 
-		Twen:Create(GLImage,TweenInfo.new(1),{
+		TweenService:Create(GLImage,TweenInfo.new(1),{
 			Rotation = GLImage.Rotation + Speed,
 			Position = nextmain,
 			Size = UDim2.fromScale(SIZ,SIZ),
@@ -341,38 +341,38 @@ Library.new = function(config)
 	local function Update()
 		local success, updateError = pcall(function()
 			if WindowTable.WindowToggle then
-			Twen:Create(MainFrame,TweenInfo.new(1.5,Enum.EasingStyle.Quint),{BackgroundTransparency = 0.4,Size = config.Size}):Play();
-			Twen:Create(MainDropShadow,TweenInfo1,{ImageTransparency = 0.6}):Play();
-			Twen:Create(Headers,TweenInfo1,{BackgroundTransparency = 0.5}):Play();
-			Twen:Create(Logo,TweenInfo1,{ImageTransparency = 0}):Play();
-			Twen:Create(MainFrame,TweenInfo.new(0.5,Enum.EasingStyle.Quint),{Position = UDim2.fromScale(0.5,0.5)}):Play();
+			TweenService:Create(MainFrame,TweenInfo.new(1.5,Enum.EasingStyle.Quint),{BackgroundTransparency = 0.4,Size = config.Size}):Play();
+			TweenService:Create(MainDropShadow,TweenInfo1,{ImageTransparency = 0.6}):Play();
+			TweenService:Create(Headers,TweenInfo1,{BackgroundTransparency = 0.5}):Play();
+			TweenService:Create(Logo,TweenInfo1,{ImageTransparency = 0}):Play();
+			TweenService:Create(MainFrame,TweenInfo.new(0.5,Enum.EasingStyle.Quint),{Position = UDim2.fromScale(0.5,0.5)}):Play();
 			WindowTable.ElBlurUI.Enabled = true;
 			
-			Twen:Create(BlockFrame1,TweenInfo1,{BackgroundTransparency = 0.8}):Play();
-			Twen:Create(BlockFrame2,TweenInfo1,{BackgroundTransparency = 0.8}):Play();
-			Twen:Create(BlockFrame3,TweenInfo1,{BackgroundTransparency = 0.8}):Play();
+			TweenService:Create(BlockFrame1,TweenInfo1,{BackgroundTransparency = 0.8}):Play();
+			TweenService:Create(BlockFrame2,TweenInfo1,{BackgroundTransparency = 0.8}):Play();
+			TweenService:Create(BlockFrame3,TweenInfo1,{BackgroundTransparency = 0.8}):Play();
 			
-			Twen:Create(TabButtonFrame,TweenInfo1,{Position = UDim2.fromScale(0.16,0.215)}):Play();
-			Twen:Create(MainTabFrame,TweenInfo1,{Position = UDim2.fromScale(0.658,0.131)}):Play();
-			Twen:Create(Description,TweenInfo1,{Position = UDim2.fromScale(0.328,0.071)}):Play();
+			TweenService:Create(TabButtonFrame,TweenInfo1,{Position = UDim2.fromScale(0.16,0.215)}):Play();
+			TweenService:Create(MainTabFrame,TweenInfo1,{Position = UDim2.fromScale(0.658,0.131)}):Play();
+			TweenService:Create(Description,TweenInfo1,{Position = UDim2.fromScale(0.328,0.071)}):Play();
 
-			Twen:Create(Title,TweenInfo1,{Position = UDim2.fromScale(0.328,0.013)}):Play();
-			Twen:Create(Headers,TweenInfo1,{Position = UDim2.fromScale(0.01,0.015)}):Play();
+			TweenService:Create(Title,TweenInfo1,{Position = UDim2.fromScale(0.328,0.013)}):Play();
+			TweenService:Create(Headers,TweenInfo1,{Position = UDim2.fromScale(0.01,0.015)}):Play();
 
-			Twen:Create(ImageButton,TweenInfo.new(0.85,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
+			TweenService:Create(ImageButton,TweenInfo.new(0.85,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
 				Position = UDim2.new(0.992500007, 0, 0.00999999978, 0),
 				Size = UDim2.new(0.0850000009, 0, 0.0850000009, 0),
 				ImageTransparency = 0.5,
 				AnchorPoint = Vector2.new(1, 0)
 			}):Play();
 			
-			Twen:Create(HomeIcon,TweenInfo.new(0.5),{
+			TweenService:Create(HomeIcon,TweenInfo.new(0.5),{
 				ImageTransparency = 1,
 			}):Play()
 
 			ImageButton.Image = "rbxassetid://10002398990"
 			
-			Twen:Create(UICorner,TweenInfo.new(1),{
+			TweenService:Create(UICorner,TweenInfo.new(1),{
 				CornerRadius = UDim.new(0, 7)
 			}):Play()
 		end)
@@ -382,38 +382,38 @@ Library.new = function(config)
 			-- Try to recover basic functionality
 			WindowTable.ElBlurUI.Enabled = WindowTable.WindowToggle
 		else
-			Twen:Create(MainFrame,TweenInfo.new(1,Enum.EasingStyle.Quint),{BackgroundTransparency = 1,Size = UDim2.new(0.085, 10,0.05, 0)}):Play();
-			Twen:Create(MainFrame,TweenInfo.new(0.5,Enum.EasingStyle.Quint),{Position = UDim2.new(0.5, 0,0.05, 0)}):Play();
-			Twen:Create(MainDropShadow,TweenInfo1,{ImageTransparency = 1}):Play();
-			Twen:Create(Headers,TweenInfo1,{BackgroundTransparency = 1}):Play();
-			Twen:Create(Logo,TweenInfo1,{ImageTransparency = 1}):Play();
-			Twen:Create(TabButtonFrame,TweenInfo1,{Position = UDim2.fromScale(0.16,1.1)}):Play();
-			Twen:Create(MainTabFrame,TweenInfo1,{Position = UDim2.fromScale(1.5,0.131)}):Play();
-			Twen:Create(Description,TweenInfo1,{Position = UDim2.fromScale(1.5,0.071)}):Play();
-			Twen:Create(Headers,TweenInfo1,{Position = UDim2.fromScale(0.01,-0.2)}):Play();
+			TweenService:Create(MainFrame,TweenInfo.new(1,Enum.EasingStyle.Quint),{BackgroundTransparency = 1,Size = UDim2.new(0.085, 10,0.05, 0)}):Play();
+			TweenService:Create(MainFrame,TweenInfo.new(0.5,Enum.EasingStyle.Quint),{Position = UDim2.new(0.5, 0,0.05, 0)}):Play();
+			TweenService:Create(MainDropShadow,TweenInfo1,{ImageTransparency = 1}):Play();
+			TweenService:Create(Headers,TweenInfo1,{BackgroundTransparency = 1}):Play();
+			TweenService:Create(Logo,TweenInfo1,{ImageTransparency = 1}):Play();
+			TweenService:Create(TabButtonFrame,TweenInfo1,{Position = UDim2.fromScale(0.16,1.1)}):Play();
+			TweenService:Create(MainTabFrame,TweenInfo1,{Position = UDim2.fromScale(1.5,0.131)}):Play();
+			TweenService:Create(Description,TweenInfo1,{Position = UDim2.fromScale(1.5,0.071)}):Play();
+			TweenService:Create(Headers,TweenInfo1,{Position = UDim2.fromScale(0.01,-0.2)}):Play();
 
-			Twen:Create(UICorner,TweenInfo.new(1),{
+			TweenService:Create(UICorner,TweenInfo.new(1),{
 				CornerRadius = UDim.new(0.1,0)
 			}):Play()
 			
-			Twen:Create(ImageButton,TweenInfo1,{
+			TweenService:Create(ImageButton,TweenInfo1,{
 				Position = UDim2.new(0.5, 0, 0.5, 0),
 				Size = UDim2.new(1,0,1,0),
 				ImageTransparency = 1,
 				AnchorPoint = Vector2.new(0.5,0.5)
 			}):Play();
 			
-			Twen:Create(HomeIcon,TweenInfo.new(1),{
+			TweenService:Create(HomeIcon,TweenInfo.new(1),{
 				ImageTransparency = 0.5,
 			}):Play()
 			
 			
-			Twen:Create(Title,TweenInfo1,{Position = UDim2.fromScale(1,0.071)}):Play();
+			TweenService:Create(Title,TweenInfo1,{Position = UDim2.fromScale(1,0.071)}):Play();
 
 			
-			Twen:Create(BlockFrame1,TweenInfo1,{BackgroundTransparency = 1}):Play();
-			Twen:Create(BlockFrame2,TweenInfo1,{BackgroundTransparency = 1}):Play();
-			Twen:Create(BlockFrame3,TweenInfo1,{BackgroundTransparency = 1}):Play();
+			TweenService:Create(BlockFrame1,TweenInfo1,{BackgroundTransparency = 1}):Play();
+			TweenService:Create(BlockFrame2,TweenInfo1,{BackgroundTransparency = 1}):Play();
+			TweenService:Create(BlockFrame3,TweenInfo1,{BackgroundTransparency = 1}):Play();
 
 			WindowTable.ElBlurUI.Enabled = false;
 		end;
@@ -426,7 +426,7 @@ Library.new = function(config)
 		task.delay(1,WindowTable.ElBlurUI.Update)
 	end;
 
-	Twen:Create(ImageButton,TweenInfo1,{
+	TweenService:Create(ImageButton,TweenInfo1,{
 		ImageTransparency = 0.5
 	}):Play()
 
@@ -489,7 +489,7 @@ Library.new = function(config)
 		end
 	end
 
-	Twen:Create(MainFrame,TweenInfo1,{BackgroundTransparency = 0.4,Size = config.Size}):Play();
+	TweenService:Create(MainFrame,TweenInfo1,{BackgroundTransparency = 0.4,Size = config.Size}):Play();
 
 	local success, err = pcall(function()
 		WindowTable.ElBlurUI = ElBlurSource.new(MainFrame)
@@ -521,7 +521,7 @@ Library.new = function(config)
 	MainDropShadow.SliceCenter = Rect.new(49, 49, 450, 450)
 	MainDropShadow.Rotation = 0.0001;
 	
-	Twen:Create(MainDropShadow,TweenInfo2,{ImageTransparency = 0.6}):Play();
+	TweenService:Create(MainDropShadow,TweenInfo2,{ImageTransparency = 0.6}):Play();
 
 	Headers.Name = "Headers"
 	Headers.Parent = MainFrame
@@ -533,7 +533,7 @@ Library.new = function(config)
 	Headers.Position = UDim2.new(0.0100000743, 0, 0.015, 0)
 	Headers.Size = UDim2.new(0.300000012, 0, 0.178419471, 0)
 	Headers.ZIndex = 3
-	Twen:Create(Headers,TweenInfo2,{BackgroundTransparency = 0.5}):Play();
+	TweenService:Create(Headers,TweenInfo2,{BackgroundTransparency = 0.5}):Play();
 
 	Logo.Name = "Logo"
 	Logo.Parent = Headers
@@ -550,11 +550,11 @@ Library.new = function(config)
 	Logo.ScaleType = Enum.ScaleType.Crop
 	Logo.ImageTransparency = 1;
 
-	Twen:Create(Logo,TweenInfo2,{ImageTransparency = 0}):Play();
+	TweenService:Create(Logo,TweenInfo2,{ImageTransparency = 0}):Play();
 
 	UICorner_2.CornerRadius = UDim.new(0, 15)
 	UICorner_2.Parent = Headers
-	Twen:Create(UICorner_2,TweenInfo2,{CornerRadius = UDim.new(0, 4)}):Play();
+	TweenService:Create(UICorner_2,TweenInfo2,{CornerRadius = UDim.new(0, 4)}):Play();
 
 	Title.Name = "Title"
 	Title.Parent = MainFrame
@@ -586,7 +586,7 @@ Library.new = function(config)
 		Title.TextTransparency = 1
 	end
 
-	Twen:Create(Title,TweenInfo2,{TextTransparency = 0}):Play();
+	TweenService:Create(Title,TweenInfo2,{TextTransparency = 0}):Play();
 
 	local success, err = pcall(function()
 		UIGradient.Rotation = 90
@@ -628,7 +628,7 @@ Library.new = function(config)
 		Description.TextColor3 = Color3.fromRGB(255, 255, 255)
 		Description.TextTransparency = 1
 	end
-	Twen:Create(Description,TweenInfo2,{TextTransparency = 0.5}):Play();
+	TweenService:Create(Description,TweenInfo2,{TextTransparency = 0.5}):Play();
 
 	UIGradient_2.Rotation = 90
 	UIGradient_2.Transparency = NumberSequence.new{NumberSequenceKeypoint.new(0.00, 0.00), NumberSequenceKeypoint.new(0.75, 0.27), NumberSequenceKeypoint.new(1.00, 1.00)}
@@ -644,7 +644,7 @@ Library.new = function(config)
 	BlockFrame1.Position = UDim2.new(0.317000002, 0, 0.5, 0)
 	BlockFrame1.Size = UDim2.new(0, 1, 1, 0)
 	BlockFrame1.ZIndex = 3
-	Twen:Create(BlockFrame1,TweenInfo2,{BackgroundTransparency = 0.8}):Play();
+	TweenService:Create(BlockFrame1,TweenInfo2,{BackgroundTransparency = 0.8}):Play();
 
 	UICorner_3.CornerRadius = UDim.new(0.5, 0)
 	UICorner_3.Parent = BlockFrame1
@@ -663,7 +663,7 @@ Library.new = function(config)
 	BlockFrame3.Position = UDim2.new(0.317000061, 0, 0.120060779, 0)
 	BlockFrame3.Size = UDim2.new(0.682999969, 0, 0, 1)
 	BlockFrame3.ZIndex = 3
-	Twen:Create(BlockFrame3,TweenInfo2,{BackgroundTransparency = 0.8}):Play();
+	TweenService:Create(BlockFrame3,TweenInfo2,{BackgroundTransparency = 0.8}):Play();
 
 	UICorner_4.CornerRadius = UDim.new(0.5, 0)
 	UICorner_4.Parent = BlockFrame3
@@ -681,7 +681,7 @@ Library.new = function(config)
 	BlockFrame2.Position = UDim2.new(-0.00100000005, 0, 0.204999998, 0)
 	BlockFrame2.Size = UDim2.new(0.318471342, 0, 0, 1)
 	BlockFrame2.ZIndex = 3
-	Twen:Create(BlockFrame2,TweenInfo2,{BackgroundTransparency = 0.8}):Play();
+	TweenService:Create(BlockFrame2,TweenInfo2,{BackgroundTransparency = 0.8}):Play();
 
 	UICorner_5.CornerRadius = UDim.new(0.5, 0)
 	UICorner_5.Parent = BlockFrame2
@@ -700,7 +700,7 @@ Library.new = function(config)
 	TabButtonFrame.ClipsDescendants = true
 	TabButtonFrame.Position = UDim2.new(0.159999996, 0, 0.215000004, 0)
 	TabButtonFrame.Size = UDim2.new(0.300000012, 0, 0.774999976, 0)
-	Twen:Create(TabButtonFrame,TweenInfo2,{BackgroundTransparency = 0.5}):Play();
+	TweenService:Create(TabButtonFrame,TweenInfo2,{BackgroundTransparency = 0.5}):Play();
 
 	UICorner_6.CornerRadius = UDim.new(0, 3)
 	UICorner_6.Parent = TabButtonFrame
@@ -745,7 +745,7 @@ Library.new = function(config)
 	MainTabFrame.ClipsDescendants = true
 	MainTabFrame.Position = UDim2.new(0.657999992, 0, 0.130999997, 0)
 	MainTabFrame.Size = UDim2.new(0.670000017, 0, 0.860000014, 0)
-	Twen:Create(MainTabFrame,TweenInfo2,{BackgroundTransparency = 0.5}):Play();
+	TweenService:Create(MainTabFrame,TweenInfo2,{BackgroundTransparency = 0.5}):Play();
 
 	UICorner_7.CornerRadius = UDim.new(0, 3)
 	UICorner_7.Parent = MainTabFrame
@@ -1019,17 +1019,17 @@ Library.new = function(config)
 			local caller = function(a)
 				local success, err = pcall(function()
 					if a then
-						Twen:Create(Frame,TweenInfo.new(0.1),{
+						TweenService:Create(Frame,TweenInfo.new(0.1),{
 							Position = UDim2.new(1.02499998, 0, 0.5, 0)
 						}):Play()
-						Twen:Create(Title,TweenInfo.new(0.1),{
+						TweenService:Create(Title,TweenInfo.new(0.1),{
 							TextTransparency = 0
 						}):Play()
 					else
-						Twen:Create(Frame,TweenInfo.new(0.1),{
+						TweenService:Create(Frame,TweenInfo.new(0.1),{
 							Position = UDim2.new(1.12499998, 0, 0.5, 0)
 						}):Play()
-						Twen:Create(Title,TweenInfo.new(0.1),{
+						TweenService:Create(Title,TweenInfo.new(0.1),{
 							TextTransparency = 0.25
 						}):Play()
 					end
@@ -1072,27 +1072,27 @@ Library.new = function(config)
 				Looped = true;
 
 				ValueId.Text = tostring(defauklt)
-				Twen:Create(DropdownFrame,TweenInfo.new(0.3),{
+				TweenService:Create(DropdownFrame,TweenInfo.new(0.3),{
 					BackgroundTransparency = 0.1;
 				}):Play()
 
-				Twen:Create(MiniDropShadow,TweenInfo.new(0.3),{
+				TweenService:Create(MiniDropShadow,TweenInfo.new(0.3),{
 					ImageTransparency = 0.6;
 				}):Play()
 
-				Twen:Create(ValueId,TweenInfo.new(0.3),{
+				TweenService:Create(ValueId,TweenInfo.new(0.3),{
 					TextTransparency = 0.8;
 				}):Play()
 
-				Twen:Create(ScrollingFrame,TweenInfo.new(0.3),{
+				TweenService:Create(ScrollingFrame,TweenInfo.new(0.3),{
 					ScrollBarImageTransparency = 0.5;
 				}):Play()
 
-				Twen:Create(BlockFrame3,TweenInfo.new(0.3),{
+				TweenService:Create(BlockFrame3,TweenInfo.new(0.3),{
 					BackgroundTransparency = 0.8;
 				}):Play()
 
-				Twen:Create(UIStroke,TweenInfo.new(0.3),{
+				TweenService:Create(UIStroke,TweenInfo.new(0.3),{
 					Transparency = 0.9;
 				}):Play()
 			end)
@@ -1158,26 +1158,26 @@ Library.new = function(config)
 		function WindowTable.Dropdown:Close(args)
 			local success, err = pcall(function()
 				Looped = false;
-				Twen:Create(UIStroke,TweenInfo.new(0.3),{
+				TweenService:Create(UIStroke,TweenInfo.new(0.3),{
 					Transparency = 1;
 				}):Play()
-				Twen:Create(DropdownFrame,TweenInfo.new(0.3),{
+				TweenService:Create(DropdownFrame,TweenInfo.new(0.3),{
 					BackgroundTransparency = 1;
 				}):Play()
 
-				Twen:Create(MiniDropShadow,TweenInfo.new(0.3),{
+				TweenService:Create(MiniDropShadow,TweenInfo.new(0.3),{
 					ImageTransparency = 1;
 				}):Play()
 
-				Twen:Create(ValueId,TweenInfo.new(0.3),{
+				TweenService:Create(ValueId,TweenInfo.new(0.3),{
 					TextTransparency = 1;
 				}):Play()
 
-				Twen:Create(ScrollingFrame,TweenInfo.new(0.3),{
+				TweenService:Create(ScrollingFrame,TweenInfo.new(0.3),{
 					ScrollBarImageTransparency = 1;
 				}):Play()
 
-				Twen:Create(BlockFrame3,TweenInfo.new(0.3),{
+				TweenService:Create(BlockFrame3,TweenInfo.new(0.3),{
 					BackgroundTransparency = 1;
 				}):Play()
 			end)
@@ -1340,7 +1340,7 @@ Library.new = function(config)
 			TabButton.ClipsDescendants = true
 			TabButton.Size = UDim2.new(0.970000029, 0, 0.5, 0)
 			TabButton.ZIndex = 5
-			Twen:Create(TabButton,TweenInfo2,{BackgroundTransparency = 0.750}):Play();
+			TweenService:Create(TabButton,TweenInfo2,{BackgroundTransparency = 0.750}):Play();
 
 			UIAspectRatioConstraint.Parent = TabButton
 			UIAspectRatioConstraint.AspectRatio = 4.250
@@ -1362,7 +1362,7 @@ Library.new = function(config)
 			Icon.ZIndex = 6
 			Icon.Image = Icons[cfg.Icon] or cfg.Icon
 			Icon.ImageTransparency = 1
-			Twen:Create(Icon,TweenInfo2,{ImageTransparency = 0.1}):Play();
+			TweenService:Create(Icon,TweenInfo2,{ImageTransparency = 0.1}):Play();
 
 			UICorner_2.CornerRadius = UDim.new(0, 3)
 			UICorner_2.Parent = Icon
@@ -1424,7 +1424,7 @@ Library.new = function(config)
 			Frame.Position = UDim2.new(1.02499998, 0, 0.5, 0)
 			Frame.Size = UDim2.new(0.0549999997, 0, 0.699999988, 0)
 			Frame.ZIndex = 6
-			Twen:Create(Frame,TweenInfo2,{BackgroundTransparency = 0.1}):Play();
+			TweenService:Create(Frame,TweenInfo2,{BackgroundTransparency = 0.1}):Play();
 
 			UICorner_3.CornerRadius = UDim.new(0, 3)
 			UICorner_3.Parent = Frame
@@ -1522,37 +1522,37 @@ Library.new = function(config)
 			if value then
 				Init.Visible = true;
 
-				Twen:Create(Icon,TweenInfo.new(0.55,Enum.EasingStyle.Quint),{
+				TweenService:Create(Icon,TweenInfo.new(0.55,Enum.EasingStyle.Quint),{
 					ImageTransparency = 0.1
 				}):Play();
 
-				Twen:Create(Title,TweenInfo.new(0.5,Enum.EasingStyle.Quint),{
+				TweenService:Create(Title,TweenInfo.new(0.5,Enum.EasingStyle.Quint),{
 					TextTransparency = 0
 				}):Play();
 
-				Twen:Create(Description,TweenInfo.new(0.4,Enum.EasingStyle.Quint),{
+				TweenService:Create(Description,TweenInfo.new(0.4,Enum.EasingStyle.Quint),{
 					TextTransparency = 0.500
 				}):Play();
 
-				Twen:Create(Frame,TweenInfo.new(0.55,Enum.EasingStyle.Quint),{
+				TweenService:Create(Frame,TweenInfo.new(0.55,Enum.EasingStyle.Quint),{
 					Position = UDim2.new(1.02499998, 0, 0.5, 0)
 				}):Play();
 			else
 				Init.Visible = false;
 
-				Twen:Create(Icon,TweenInfo.new(0.55,Enum.EasingStyle.Quint),{
+				TweenService:Create(Icon,TweenInfo.new(0.55,Enum.EasingStyle.Quint),{
 					ImageTransparency = 0.25
 				}):Play();
 
-				Twen:Create(Title,TweenInfo.new(0.4,Enum.EasingStyle.Quint),{
+				TweenService:Create(Title,TweenInfo.new(0.4,Enum.EasingStyle.Quint),{
 					TextTransparency = 0.25
 				}):Play();
 
-				Twen:Create(Description,TweenInfo.new(0.5,Enum.EasingStyle.Quint),{
+				TweenService:Create(Description,TweenInfo.new(0.5,Enum.EasingStyle.Quint),{
 					TextTransparency = 0.65
 				}):Play();
 
-				Twen:Create(Frame,TweenInfo.new(0.55,Enum.EasingStyle.Quint),{
+				TweenService:Create(Frame,TweenInfo.new(0.55,Enum.EasingStyle.Quint),{
 					Position = UDim2.new(1.1, 0, 0.4, 0)
 				}):Play();
 			end;
@@ -1618,7 +1618,7 @@ Library.new = function(config)
 			Section.BorderSizePixel = 0
 			Section.Size = UDim2.new(0.980000019, 0, 0, 200)
 			Section.ClipsDescendants = true;
-			Twen:Create(Section,TweenInfo1,{BackgroundTransparency = 0.75}):Play();
+			TweenService:Create(Section,TweenInfo1,{BackgroundTransparency = 0.75}):Play();
 
 			UICorner.CornerRadius = UDim.new(0, 3)
 			UICorner.Parent = Section
@@ -1630,7 +1630,7 @@ Library.new = function(config)
 			Header.BorderColor3 = Color3.fromRGB(0, 0, 0)
 			Header.BorderSizePixel = 0
 			Header.Size = UDim2.new(1, 0, 0.5, 0)
-			Twen:Create(Header,TweenInfo2,{BackgroundTransparency = 0.9}):Play();
+			TweenService:Create(Header,TweenInfo2,{BackgroundTransparency = 0.9}):Play();
 
 			UIAspectRatioConstraint.Parent = Header
 			UIAspectRatioConstraint.AspectRatio = 8.000
@@ -1652,7 +1652,7 @@ Library.new = function(config)
 			Icon.ZIndex = 6
 			Icon.Image = Icons[c_o_n_f_i_g.Icon] or c_o_n_f_i_g.Icon; 
 			Icon.ImageTransparency = 1
-			Twen:Create(Icon,TweenInfo2,{ImageTransparency = 0.1}):Play();
+			TweenService:Create(Icon,TweenInfo2,{ImageTransparency = 0.1}):Play();
 
 			UICorner_3.CornerRadius = UDim.new(0, 3)
 			UICorner_3.Parent = Icon
@@ -1671,7 +1671,7 @@ Library.new = function(config)
 			BlockFrame.Position = UDim2.new(0.5, 0, 1, 0)
 			BlockFrame.Size = UDim2.new(1, 0, 0, 1)
 			BlockFrame.ZIndex = 3
-			Twen:Create(BlockFrame,TweenInfo2,{BackgroundTransparency = 0.8}):Play();
+			TweenService:Create(BlockFrame,TweenInfo2,{BackgroundTransparency = 0.8}):Play();
 
 			UICorner_4.CornerRadius = UDim.new(0.5, 0)
 			UICorner_4.Parent = BlockFrame
@@ -1696,7 +1696,7 @@ Library.new = function(config)
 			Title.TextWrapped = true
 			Title.TextXAlignment = Enum.TextXAlignment.Left
 			Title.TextTransparency = 1
-			Twen:Create(Title,TweenInfo2,{TextTransparency = 0}):Play();
+			TweenService:Create(Title,TweenInfo2,{TextTransparency = 0}):Play();
 
 			UIGradient_3.Rotation = 90
 			UIGradient_3.Transparency = NumberSequence.new{NumberSequenceKeypoint.new(0.00, 0.00), NumberSequenceKeypoint.new(0.84, 0.25), NumberSequenceKeypoint.new(1.00, 1.00)}
@@ -1710,7 +1710,7 @@ Library.new = function(config)
 
 			SectionAutoUI:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(function()
 				local success, err = pcall(function()
-					Twen:Create(Section,TweenInfo.new(0.1),{
+					TweenService:Create(Section,TweenInfo.new(0.1),{
 						Size = UDim2.new(0.98,0,0,math.max(SectionAutoUI.AbsoluteContentSize.Y,50) + (SectionAutoUI.Padding.Offset * 1.12));
 					}):Play()
 				end)
@@ -1722,7 +1722,7 @@ Library.new = function(config)
 			UIStroke.Transparency = 1
 			UIStroke.Color = Color3.fromRGB(255, 255, 255)
 			UIStroke.Parent = Section
-			Twen:Create(UIStroke,TweenInfo1,{Transparency = 0.9}):Play();
+			TweenService:Create(UIStroke,TweenInfo1,{Transparency = 0.9}):Play();
 
 			UIGradient_4.Rotation = 90
 			UIGradient_4.Transparency = NumberSequence.new{NumberSequenceKeypoint.new(0.00, 0.00), NumberSequenceKeypoint.new(0.17, 1.00), NumberSequenceKeypoint.new(0.82, 1.00), NumberSequenceKeypoint.new(1.00, 0.00)}
@@ -1757,7 +1757,7 @@ Library.new = function(config)
 					FunctionToggle.BorderSizePixel = 0
 					FunctionToggle.Size = UDim2.new(0.949999988, 0, 0.5, 0)
 					FunctionToggle.ZIndex = 17
-					Twen:Create(FunctionToggle,TweenInfo1,{BackgroundTransparency = 0.8}):Play();
+					TweenService:Create(FunctionToggle,TweenInfo1,{BackgroundTransparency = 0.8}):Play();
 
 					UIAspectRatioConstraint.Parent = FunctionToggle
 					UIAspectRatioConstraint.AspectRatio = 8.000
@@ -1848,21 +1848,21 @@ Library.new = function(config)
 				local function OnChange(value)
 					if value then
 
-						Twen:Create(TextInt,TweenInfo.new(0.15,Enum.EasingStyle.Quint),{
+						TweenService:Create(TextInt,TweenInfo.new(0.15,Enum.EasingStyle.Quint),{
 							TextTransparency = 0.02
 						}):Play()
 
-						Twen:Create(Icon,TweenInfo.new(0.15,Enum.EasingStyle.Quint),{
+						TweenService:Create(Icon,TweenInfo.new(0.15,Enum.EasingStyle.Quint),{
 							Position = UDim2.new(0.75, 0, 0.5, 0),
 							BackgroundTransparency = 0.4
 						}):Play()
 					else
-						Twen:Create(Icon,TweenInfo.new(0.15,Enum.EasingStyle.Quint),{
+						TweenService:Create(Icon,TweenInfo.new(0.15,Enum.EasingStyle.Quint),{
 							Position = UDim2.new(0.25, 0, 0.5, 0),
 							BackgroundTransparency = 0.500
 						}):Play()
 
-						Twen:Create(TextInt,TweenInfo.new(0.15,Enum.EasingStyle.Quint),{
+						TweenService:Create(TextInt,TweenInfo.new(0.15,Enum.EasingStyle.Quint),{
 							TextTransparency = 0.25
 						}):Play()
 					end;
@@ -1931,7 +1931,7 @@ Library.new = function(config)
 				TextInt.TextTransparency = 1
 				TextInt.TextWrapped = true
 				TextInt.TextXAlignment = Enum.TextXAlignment.Left
-				Twen:Create(TextInt,TweenInfo1,{TextTransparency = 0.25}):Play();
+				TweenService:Create(TextInt,TweenInfo1,{TextTransparency = 0.25}):Play();
 
 				UIGradient.Rotation = 90
 				UIGradient.Transparency = NumberSequence.new{NumberSequenceKeypoint.new(0.00, 0.00), NumberSequenceKeypoint.new(0.84, 0.25), NumberSequenceKeypoint.new(1.00, 1.00)}
@@ -1974,7 +1974,7 @@ Library.new = function(config)
 					FunctionButton.BorderSizePixel = 0
 					FunctionButton.Size = UDim2.new(0.949999988, 0, 0.5, 0)
 					FunctionButton.ZIndex = 17
-					Twen:Create(FunctionButton,TweenInfo1,{
+					TweenService:Create(FunctionButton,TweenInfo1,{
 						BackgroundTransparency = 0.750,
 						Size = UDim2.new(0.949999988, 0, 0.5, 0)
 					}):Play();
@@ -1983,7 +1983,7 @@ Library.new = function(config)
 					UIAspectRatioConstraint.AspectRatio = 7.000
 					UIAspectRatioConstraint.AspectType = Enum.AspectType.ScaleWithParentSize
 
-					Twen:Create(UIAspectRatioConstraint,TweenInfo1,{
+					TweenService:Create(UIAspectRatioConstraint,TweenInfo1,{
 						AspectRatio = 7.65
 					}):Play();
 
@@ -2047,11 +2047,11 @@ Library.new = function(config)
 
 					local successEnter, errEnter = pcall(function()
 						Button.MouseEnter:Connect(function()
-							Twen:Create(DropShadow,TweenInfo.new(0.2),{
+							TweenService:Create(DropShadow,TweenInfo.new(0.2),{
 								ImageTransparency = 0.35
 							}):Play()
 
-							Twen:Create(TextInt,TweenInfo.new(0.2),{
+							TweenService:Create(TextInt,TweenInfo.new(0.2),{
 								TextTransparency = 0
 							}):Play()
 						end)
@@ -2060,11 +2060,11 @@ Library.new = function(config)
 
 					local successLeave, errLeave = pcall(function()
 						Button.MouseLeave:Connect(function()
-							Twen:Create(DropShadow,TweenInfo.new(0.2),{
+							TweenService:Create(DropShadow,TweenInfo.new(0.2),{
 								ImageTransparency = 0.600
 							}):Play()
 
-							Twen:Create(TextInt,TweenInfo.new(0.2),{
+							TweenService:Create(TextInt,TweenInfo.new(0.2),{
 								TextTransparency = 0.25
 							}):Play()
 						end)
@@ -2215,7 +2215,7 @@ Library.new = function(config)
 							warn("TextService GetTextSize Error:", size)
 							size = Vector2.new(50, 20) -- fallback size
 						end
-						Twen:Create(System,TweenInfo.new(0.2),{
+						TweenService:Create(System,TweenInfo.new(0.2),{
 							Size = UDim2.new(0, size.X + 2, 0.600000024, 0)
 						}):Play()
 					end
@@ -2228,7 +2228,7 @@ Library.new = function(config)
 
 							IsWIP = true;
 
-							Twen:Create(TextInt,TweenInfo.new(0.1),{
+							TweenService:Create(TextInt,TweenInfo.new(0.1),{
 								TextTransparency = 0
 							}):Play();
 
@@ -2242,7 +2242,7 @@ Library.new = function(config)
 
 							UpdateUI('...')
 							local Bind = BindEvent.Event:Wait();
-							Twen:Create(TextInt,TweenInfo.new(0.1),{
+							TweenService:Create(TextInt,TweenInfo.new(0.1),{
 								TextTransparency = 0.250
 							}):Play();
 							Signal:Disconnect()
@@ -2403,7 +2403,7 @@ Library.new = function(config)
 						local Value = math.round(Main)
 						local Size = UDim2.fromScale(SizeScale, 1)
 						ValueText.Text = tostring(Value)..'/'..tostring(slider.Max)
-						Twen:Create(TFrame,TweenInfo.new(0.1),{Size = Size}):Play()
+						TweenService:Create(TFrame,TweenInfo.new(0.1),{Size = Size}):Play()
 						slider.Callback(Value);
 					end
 
@@ -2412,7 +2412,7 @@ Library.new = function(config)
 							if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 								Holding = true
 								update(Input)
-								Twen:Create(TextInt,TweenInfo.new(0.1),{
+								TweenService:Create(TextInt,TweenInfo.new(0.1),{
 									TextTransparency = 0
 								}):Play()
 							end
@@ -2421,7 +2421,7 @@ Library.new = function(config)
 						MFrame.InputEnded:Connect(function(Input)
 							if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 								Holding = false
-								Twen:Create(TextInt,TweenInfo.new(0.1),{
+								TweenService:Create(TextInt,TweenInfo.new(0.1),{
 									TextTransparency = 0.3
 								}):Play()
 							end
@@ -2560,7 +2560,7 @@ Library.new = function(config)
 
 					local successEnter, errEnter = pcall(function()
 						MFrame.MouseEnter:Connect(function()
-							Twen:Create(ValueText,TweenInfo.new(0.3),{
+							TweenService:Create(ValueText,TweenInfo.new(0.3),{
 								TextTransparency = 0.1
 							}):Play()
 						end)
@@ -2569,7 +2569,7 @@ Library.new = function(config)
 
 					local successLeave, errLeave = pcall(function()
 						MFrame.MouseLeave:Connect(function()
-							Twen:Create(ValueText,TweenInfo.new(0.3),{
+							TweenService:Create(ValueText,TweenInfo.new(0.3),{
 								TextTransparency = 0.500
 							}):Play()
 						end)
@@ -2925,7 +2925,7 @@ Library.NewAuth = function(conf)
 					TextInt.TextTransparency = 1
 					TextInt.TextWrapped = true
 					TextInt.TextXAlignment = Enum.TextXAlignment.Left
-					Twen:Create(TextInt,TweenInfo1,{TextTransparency = 0.25}):Play();
+					TweenService:Create(TextInt,TweenInfo1,{TextTransparency = 0.25}):Play();
 
 					UIGradient.Rotation = 90
 					UIGradient.Transparency = NumberSequence.new{NumberSequenceKeypoint.new(0.00, 0.00), NumberSequenceKeypoint.new(0.84, 0.25), NumberSequenceKeypoint.new(1.00, 1.00)}
@@ -2987,7 +2987,7 @@ Library.NewAuth = function(conf)
 	UIStroke.Color = Color3.fromRGB(255, 255, 255)
 	UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	UIStroke.Parent = Button2
-	Twen:Create(UIStroke,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
+	TweenService:Create(UIStroke,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
 		Transparency = 0.900
 	}):Play();
 
@@ -3029,7 +3029,7 @@ Library.NewAuth = function(conf)
 	UIStroke_2.Color = Color3.fromRGB(255, 255, 255)
 	UIStroke_2.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	UIStroke_2.Parent = TextBox
-	Twen:Create(UIStroke_2,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
+	TweenService:Create(UIStroke_2,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
 		Transparency = 0.900
 	}):Play();
 	Button1.Name = "Button1"
@@ -3067,7 +3067,7 @@ Library.NewAuth = function(conf)
 	UIStroke_3.Color = Color3.fromRGB(255, 255, 255)
 	UIStroke_3.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	UIStroke_3.Parent = Button1
-	Twen:Create(UIStroke_3,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
+	TweenService:Create(UIStroke_3,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
 		Transparency = 0.900
 	}):Play();
 	MainDropShadow.Name = "MainDropShadow"
@@ -3084,7 +3084,7 @@ Library.NewAuth = function(conf)
 	MainDropShadow.ImageTransparency = 1
 	MainDropShadow.ScaleType = Enum.ScaleType.Slice
 	MainDropShadow.SliceCenter = Rect.new(49, 49, 450, 450)
-	Twen:Create(MainDropShadow,TweenInfo.new(2,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
+	TweenService:Create(MainDropShadow,TweenInfo.new(2,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
 		ImageTransparency = 0.600
 	}):Play();
 	Title.Name = "Title"
@@ -3156,7 +3156,7 @@ Library.NewAuth = function(conf)
 
 	return {
 		Close = function()
-			Twen:Create(MainDropShadow,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
+			TweenService:Create(MainDropShadow,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
 				ImageTransparency = 1
 			}):Play();
 
@@ -3167,12 +3167,12 @@ Library.NewAuth = function(conf)
 				game:GetService('RunService'):UnbindFromRenderStep(v);
 			end;
 
-			Twen:Create(MainFrame,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
+			TweenService:Create(MainFrame,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
 				Size = UDim2.new(0.8,0,0.8,0)
 			}):Play();
 
 			task.delay(1,function()
-				Twen:Create(MainFrame,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
+				TweenService:Create(MainFrame,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
 					Position = UDim2.new(0.5, 0, 1.5, 0),
 					Size = UDim2.new(0.8,0,0.8,0)
 				}):Play();
@@ -3244,7 +3244,7 @@ Library.Notification = function()
 			DropShadow.ScaleType = Enum.ScaleType.Slice
 			DropShadow.Rotation = 0.001
 			DropShadow.SliceCenter = Rect.new(49, 49, 450, 450)
-			Twen:Create(DropShadow,css_style,{
+			TweenService:Create(DropShadow,css_style,{
 				ImageTransparency = 0.600
 			}):Play()
 
@@ -3256,7 +3256,7 @@ Library.Notification = function()
 			Notifiy.BorderSizePixel = 0
 			Notifiy.ClipsDescendants = true
 			Notifiy.Size = UDim2.new(0,0,0,0)
-			Twen:Create(Notifiy,css_style,{
+			TweenService:Create(Notifiy,css_style,{
 				BackgroundTransparency = 0.350,
 				Size = UDim2.new(0.2, 0, 0.2, 0)
 			}):Play()
@@ -3277,7 +3277,7 @@ Library.Notification = function()
 			icon.Image = Icons[ctfx.Icon] or ctfx.Icon
 			icon.ImageTransparency = 1;
 
-			Twen:Create(icon,css_style,{
+			TweenService:Create(icon,css_style,{
 				ImageTransparency = 0.1,
 				Size = UDim2.new(0.699999988, 0, 0.699999988, 0)
 			}):Play()
@@ -3286,7 +3286,7 @@ Library.Notification = function()
 			UICorner_2.CornerRadius = UDim.new(1,0)
 			UICorner_2.Parent = icon
 
-			Twen:Create(UICorner_2,css_style,{
+			TweenService:Create(UICorner_2,css_style,{
 				CornerRadius = UDim.new(0.4, 0)
 			}):Play()
 
@@ -3322,46 +3322,46 @@ Library.Notification = function()
 			TextLabel_2.TextYAlignment = Enum.TextYAlignment.Top
 
 			local mkView = function()
-				Twen:Create(Notifiy,css_style,{
+				TweenService:Create(Notifiy,css_style,{
 					Size = UDim2.new(1, 0, 0.2, 0)
 				}):Play()
 
-				Twen:Create(UICorner,css_style,{
+				TweenService:Create(UICorner,css_style,{
 					CornerRadius = UDim.new(0, 4)
 				}):Play()
 
-				Twen:Create(icon,css_style,{
+				TweenService:Create(icon,css_style,{
 					Position = UDim2.new(0.100000001, 0, 0.5, 0)
 				}):Play()
 
-				Twen:Create(TextLabel,css_style,{
+				TweenService:Create(TextLabel,css_style,{
 					Position = UDim2.new(0.199930489, 0, 0.130389422, 0)
 				}):Play()
 
-				Twen:Create(TextLabel_2,css_style,{
+				TweenService:Create(TextLabel_2,css_style,{
 					Position = UDim2.new(0.199930489, 0, 0.34770447, 0)
 				}):Play()
 			end;
 
 
 			local mkLoad = function()
-				Twen:Create(Notifiy,css_style,{
+				TweenService:Create(Notifiy,css_style,{
 					Size = UDim2.new(0.2, 0, 0.2, 0)
 				}):Play()
 
-				Twen:Create(UICorner,css_style,{
+				TweenService:Create(UICorner,css_style,{
 					CornerRadius = UDim.new(0.4,0)
 				}):Play()
 
-				Twen:Create(icon,css_style,{
+				TweenService:Create(icon,css_style,{
 					Position = UDim2.new(0.5, 0, 0.5, 0)
 				}):Play()
 
-				Twen:Create(TextLabel,css_style,{
+				TweenService:Create(TextLabel,css_style,{
 					Position = UDim2.new(1, 0, 0.130389422, 0)
 				}):Play()
 
-				Twen:Create(TextLabel_2,css_style,{
+				TweenService:Create(TextLabel_2,css_style,{
 					Position = UDim2.new(1, 0, 0.34770447, 0)
 				}):Play()
 			end;
@@ -3379,16 +3379,16 @@ Library.Notification = function()
 
 					task.wait(0.65)
 
-					Twen:Create(Notifiy,css_style,{
+					TweenService:Create(Notifiy,css_style,{
 						BackgroundTransparency = 1,
 						Size = UDim2.new(0,0,0,0)
 					}):Play()
 
-					Twen:Create(icon,css_style,{
+					TweenService:Create(icon,css_style,{
 						ImageTransparency = 1
 					}):Play()
 
-					Twen:Create(DropShadow,css_style,{
+					TweenService:Create(DropShadow,css_style,{
 						ImageTransparency = 1
 					}):Play()
 
@@ -3832,3 +3832,4 @@ end;
 
 print("[ OK ]: Fetch Nothing Library")
 return table.freeze(Library)
+
