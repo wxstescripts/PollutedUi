@@ -1,4 +1,4 @@
-# NOTHING
+# Polluted
 - Smooth
 - Not lag
 - Open Source
@@ -6,10 +6,10 @@
   
 ## Require Library
 ```lua
-local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/Library.lua'))();
-local Windows = WHATLibrary.new({
+local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/PollutedUi/refs/heads/main/Library.lua'))();
+local Windows = Library.new({
 	Title = "My Script",
-	Description = "WHAT UI Library",
+	Description = "Polluted Ui Library",
 	Keybind = Enum.KeyCode.LeftControl,
 	Logo = 'http://www.roblox.com/asset/?id=18898582662'
 })
@@ -159,8 +159,8 @@ InfoSection:NewButton({
 # Full Example
 
 ```lua
-local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/Library.lua'))();
-local Notification = WHATUiLibrary.Notification();
+local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/PollutedUi/refs/heads/main/Library.lua'))();
+local Notification = PollutedUiLibrary.Notification();
 
 Notification.new({
 	Title = "Notification",
@@ -325,5 +325,6 @@ Notification.new({
 	Icon = "rbxassetid://7733993369",
 })
 ```
+
 
 
