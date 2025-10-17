@@ -339,92 +339,92 @@ Library.new = function(config)
 	HomeIcon.BackgroundTransparency = 1;
 	
 	local function Update()
-		local success, updateError = pcall(function()
-			if WindowTable.WindowToggle then
-			TweenService:Create(MainFrame,TweenInfo.new(1.5,Enum.EasingStyle.Quint),{BackgroundTransparency = 0.4,Size = config.Size}):Play();
-			TweenService:Create(MainDropShadow,TweenInfo1,{ImageTransparency = 0.6}):Play();
-			TweenService:Create(Headers,TweenInfo1,{BackgroundTransparency = 0.5}):Play();
-			TweenService:Create(Logo,TweenInfo1,{ImageTransparency = 0}):Play();
-			TweenService:Create(MainFrame,TweenInfo.new(0.5,Enum.EasingStyle.Quint),{Position = UDim2.fromScale(0.5,0.5)}):Play();
-			WindowTable.ElBlurUI.Enabled = true;
-			
-			TweenService:Create(BlockFrame1,TweenInfo1,{BackgroundTransparency = 0.8}):Play();
-			TweenService:Create(BlockFrame2,TweenInfo1,{BackgroundTransparency = 0.8}):Play();
-			TweenService:Create(BlockFrame3,TweenInfo1,{BackgroundTransparency = 0.8}):Play();
-			
-			TweenService:Create(TabButtonFrame,TweenInfo1,{Position = UDim2.fromScale(0.16,0.215)}):Play();
-			TweenService:Create(MainTabFrame,TweenInfo1,{Position = UDim2.fromScale(0.658,0.131)}):Play();
-			TweenService:Create(Description,TweenInfo1,{Position = UDim2.fromScale(0.328,0.071)}):Play();
+    	local success, updateError = pcall(function()
+        	if WindowTable.WindowToggle then
+            	-- Open animation
+            	TweenService:Create(MainFrame, TweenInfo.new(1.5, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
+                	BackgroundTransparency = 0.4,
+                	Size = config.Size
+            	}):Play()
 
-			TweenService:Create(Title,TweenInfo1,{Position = UDim2.fromScale(0.328,0.013)}):Play();
-			TweenService:Create(Headers,TweenInfo1,{Position = UDim2.fromScale(0.01,0.015)}):Play();
+            	TweenService:Create(MainDropShadow, TweenInfo1, {ImageTransparency = 0.6}):Play()
+            	TweenService:Create(Headers, TweenInfo1, {BackgroundTransparency = 0.5}):Play()
+            	TweenService:Create(Logo, TweenInfo1, {ImageTransparency = 0}):Play()
+            	TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
+                	Position = UDim2.fromScale(0.5,0.5)
+            	}):Play()
+            	WindowTable.ElBlurUI.Enabled = true
 
-			TweenService:Create(ImageButton,TweenInfo.new(0.85,Enum.EasingStyle.Quint,Enum.EasingDirection.InOut),{
-				Position = UDim2.new(0.992500007, 0, 0.00999999978, 0),
-				Size = UDim2.new(0.0850000009, 0, 0.0850000009, 0),
-				ImageTransparency = 0.5,
-				AnchorPoint = Vector2.new(1, 0)
-			}):Play();
-			
-			TweenService:Create(HomeIcon,TweenInfo.new(0.5),{
-				ImageTransparency = 1,
-			}):Play()
+            	TweenService:Create(BlockFrame1, TweenInfo1, {BackgroundTransparency = 0.8}):Play()
+            	TweenService:Create(BlockFrame2, TweenInfo1, {BackgroundTransparency = 0.8}):Play()
+            	TweenService:Create(BlockFrame3, TweenInfo1, {BackgroundTransparency = 0.8}):Play()
 
-			ImageButton.Image = "rbxassetid://10002398990"
-			
-			TweenService:Create(UICorner,TweenInfo.new(1),{
-				CornerRadius = UDim.new(0, 7)
-			}):Play()
-		end)
-		
-		if not success then
-			warn("Window Update Error:", updateError)
-			-- Try to recover basic functionality
-			WindowTable.ElBlurUI.Enabled = WindowTable.WindowToggle
-		else
-			TweenService:Create(MainFrame,TweenInfo.new(1,Enum.EasingStyle.Quint),{BackgroundTransparency = 1,Size = UDim2.new(0.085, 10,0.05, 0)}):Play();
-			TweenService:Create(MainFrame,TweenInfo.new(0.5,Enum.EasingStyle.Quint),{Position = UDim2.new(0.5, 0,0.05, 0)}):Play();
-			TweenService:Create(MainDropShadow,TweenInfo1,{ImageTransparency = 1}):Play();
-			TweenService:Create(Headers,TweenInfo1,{BackgroundTransparency = 1}):Play();
-			TweenService:Create(Logo,TweenInfo1,{ImageTransparency = 1}):Play();
-			TweenService:Create(TabButtonFrame,TweenInfo1,{Position = UDim2.fromScale(0.16,1.1)}):Play();
-			TweenService:Create(MainTabFrame,TweenInfo1,{Position = UDim2.fromScale(1.5,0.131)}):Play();
-			TweenService:Create(Description,TweenInfo1,{Position = UDim2.fromScale(1.5,0.071)}):Play();
-			TweenService:Create(Headers,TweenInfo1,{Position = UDim2.fromScale(0.01,-0.2)}):Play();
+            	TweenService:Create(TabButtonFrame, TweenInfo1, {Position = UDim2.fromScale(0.16,0.215)}):Play()
+            	TweenService:Create(MainTabFrame, TweenInfo1, {Position = UDim2.fromScale(0.658,0.131)}):Play()
+            	TweenService:Create(Description, TweenInfo1, {Position = UDim2.fromScale(0.328,0.071)}):Play()
+            	TweenService:Create(Title, TweenInfo1, {Position = UDim2.fromScale(0.328,0.013)}):Play()
+            	TweenService:Create(Headers, TweenInfo1, {Position = UDim2.fromScale(0.01,0.015)}):Play()
 
-			TweenService:Create(UICorner,TweenInfo.new(1),{
-				CornerRadius = UDim.new(0.1,0)
-			}):Play()
-			
-			TweenService:Create(ImageButton,TweenInfo1,{
-				Position = UDim2.new(0.5, 0, 0.5, 0),
-				Size = UDim2.new(1,0,1,0),
-				ImageTransparency = 1,
-				AnchorPoint = Vector2.new(0.5,0.5)
-			}):Play();
-			
-			TweenService:Create(HomeIcon,TweenInfo.new(1),{
-				ImageTransparency = 0.5,
-			}):Play()
-			
-			
-			TweenService:Create(Title,TweenInfo1,{Position = UDim2.fromScale(1,0.071)}):Play();
+            	TweenService:Create(ImageButton, TweenInfo.new(0.85, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
+                	Position = UDim2.new(0.9925, 0, 0.01, 0),
+                	Size = UDim2.new(0.085, 0, 0.085, 0),
+                	ImageTransparency = 0.5,
+                	AnchorPoint = Vector2.new(1, 0)
+            	}):Play()
 
-			
-			TweenService:Create(BlockFrame1,TweenInfo1,{BackgroundTransparency = 1}):Play();
-			TweenService:Create(BlockFrame2,TweenInfo1,{BackgroundTransparency = 1}):Play();
-			TweenService:Create(BlockFrame3,TweenInfo1,{BackgroundTransparency = 1}):Play();
+            	TweenService:Create(HomeIcon, TweenInfo.new(0.5), {ImageTransparency = 1}):Play()
+            	ImageButton.Image = "rbxassetid://10002398990"
 
-			WindowTable.ElBlurUI.Enabled = false;
-		end;
+            	TweenService:Create(UICorner, TweenInfo.new(1), {CornerRadius = UDim.new(0, 7)}):Play()
+        	else
+            	-- Close animation
+            	TweenService:Create(MainFrame, TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
+                	BackgroundTransparency = 1,
+                	Size = UDim2.new(0.085, 10, 0.05, 0)
+            	}):Play()
 
-		WindowTable.Dropdown:Close()
-		if WindowTable.ToggleButton then
-			WindowTable.ToggleButton();
-		end;
+            	TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
+                	Position = UDim2.new(0.5, 0, 0.05, 0)
+            	}):Play()
 
-		task.delay(1,WindowTable.ElBlurUI.Update)
-	end;
+            	TweenService:Create(MainDropShadow, TweenInfo1, {ImageTransparency = 1}):Play()
+            	TweenService:Create(Headers, TweenInfo1, {BackgroundTransparency = 1}):Play()
+            	TweenService:Create(Logo, TweenInfo1, {ImageTransparency = 1}):Play()
+            	TweenService:Create(TabButtonFrame, TweenInfo1, {Position = UDim2.fromScale(0.16, 1.1)}):Play()
+            	TweenService:Create(MainTabFrame, TweenInfo1, {Position = UDim2.fromScale(1.5, 0.131)}):Play()
+            	TweenService:Create(Description, TweenInfo1, {Position = UDim2.fromScale(1.5, 0.071)}):Play()
+            	TweenService:Create(Headers, TweenInfo1, {Position = UDim2.fromScale(0.01, -0.2)}):Play()
+            	TweenService:Create(UICorner, TweenInfo.new(1), {CornerRadius = UDim.new(0.1,0)}):Play()
+
+            	TweenService:Create(ImageButton, TweenInfo1, {
+                	Position = UDim2.new(0.5, 0, 0.5, 0),
+                	Size = UDim2.new(1,0,1,0),
+                	ImageTransparency = 1,
+                	AnchorPoint = Vector2.new(0.5,0.5)
+            	}):Play()
+
+            	TweenService:Create(HomeIcon, TweenInfo.new(1), {ImageTransparency = 0.5}):Play()
+            	TweenService:Create(Title, TweenInfo1, {Position = UDim2.fromScale(1,0.071)}):Play()
+            	TweenService:Create(BlockFrame1, TweenInfo1, {BackgroundTransparency = 1}):Play()
+            	TweenService:Create(BlockFrame2, TweenInfo1, {BackgroundTransparency = 1}):Play()
+            	TweenService:Create(BlockFrame3, TweenInfo1, {BackgroundTransparency = 1}):Play()
+
+            	WindowTable.ElBlurUI.Enabled = false
+        	end
+
+        	WindowTable.Dropdown:Close()
+        	if WindowTable.ToggleButton then
+            	WindowTable.ToggleButton()
+        	end
+
+        	task.delay(1, WindowTable.ElBlurUI.Update)
+    	end)
+
+    	if not success then
+        	warn("Window Update Error:", updateError)
+        	WindowTable.ElBlurUI.Enabled = WindowTable.WindowToggle
+    	end
+	end
 
 	TweenService:Create(ImageButton,TweenInfo1,{
 		ImageTransparency = 0.5
@@ -3832,4 +3832,3 @@ end;
 
 print("[ OK ]: Fetch Nothing Library")
 return table.freeze(Library)
-
