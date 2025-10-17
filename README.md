@@ -6,10 +6,10 @@
   
 ## Require Library
 ```lua
-local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/main/UIsrc.lua'))();
-local Windows = NothingLibrary.new({
-	Title = "NOTHING",
-	Description = "Nothing UI Library",
+local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/Library.lua'))();
+local Windows = WHATLibrary.new({
+	Title = "My Script",
+	Description = "WHAT UI Library",
 	Keybind = Enum.KeyCode.LeftControl,
 	Logo = 'http://www.roblox.com/asset/?id=18898582662'
 })
@@ -160,7 +160,7 @@ InfoSection:NewButton({
 
 ```lua
 local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/main/UIsrc.lua'))();
-local Notification = NothingLibrary.Notification();
+local Notification = WHATUiLibrary.Notification();
 
 Notification.new({
 	Title = "Notification",
@@ -169,9 +169,9 @@ Notification.new({
 	Icon = "rbxassetid://8997385628"
 })
 
-local Windows = NothingLibrary.new({
-	Title = "NOTHING",
-	Description = "Nothing UI Library",
+local Windows = WHATLibrary.new({
+	Title = "My Script",
+	Description = "WHAT UI Library",
 	Keybind = Enum.KeyCode.LeftControl,
 	Logo = 'http://www.roblox.com/asset/?id=18898582662'
 })
@@ -316,7 +316,7 @@ NothingLibrary.NewAuth({
 ### Notification
 
 ```lua
-local Notification = NothingLibrary.Notification();
+local Notification = WHATLibrary.Notification();
 
 Notification.new({
 	Description = 'Example';
@@ -325,3 +325,4 @@ Notification.new({
 	Icon = "rbxassetid://7733993369",
 })
 ```
+
