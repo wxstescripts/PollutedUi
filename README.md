@@ -6,7 +6,7 @@
   
 ## Require Library
 ```lua
-local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/UIsrc.lua'))();
+local NothingLibrary = loadstring(game:HttpGetAsync('[https://raw.githubusercontent.com/wxstescripts/WHATui/refs/heads/main/UIsrc.lua](https://raw.githubusercontent.com/wxstescripts/WHATui/main/UIsrc.lua)'))();
 local Windows = NothingLibrary.new({
 	Title = "NOTHING",
 	Description = "Nothing UI Library",
@@ -159,7 +159,7 @@ InfoSection:NewButton({
 # Full Example
 
 ```lua
-local NothingLibrary = loadstring(game:HttpGetAsync('https://raw.githubusercontent.com/3345-c-a-t-s-u-s/NOTHING/main/source.lua'))();
+local NothingLibrary = loadstring(game:HttpGetAsync('[https://raw.githubusercontent.com/3345-c-a-t-s-u-s/NOTHING/main/source.lua](https://raw.githubusercontent.com/wxstescripts/WHATui/main/UIsrc.lua)'))();
 local Notification = NothingLibrary.Notification();
 
 Notification.new({
@@ -325,3 +325,4 @@ Notification.new({
 	Icon = "rbxassetid://7733993369",
 })
 ```
+
