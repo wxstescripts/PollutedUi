@@ -1,10 +1,8 @@
--- PollutedUiLib.lua
 local PollutedUiLib = {}
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local GuiService = game:GetService("GuiService")
 
 -- ===== HELPERS =====
 local function createUICorner(frame, radius)
@@ -22,11 +20,7 @@ local function isMobile()
 end
 
 local function scaleSize(value)
-    if isMobile() then
-        return value * 0.75
-    else
-        return value
-    end
+    return isMobile() and value * 0.75 or value
 end
 
 local function makeDraggable(frame)
@@ -152,6 +146,7 @@ function PollutedUiLib.new(config)
 
             local sectionAPI = {}
 
+            -- BUTTON
             function sectionAPI:NewButton(params)
                 local btn = Instance.new("TextButton", sectionFrame)
                 btn.Size = UDim2.new(1,-20,0,scaleSize(35))
@@ -165,6 +160,7 @@ function PollutedUiLib.new(config)
                 btn.MouseButton1Click:Connect(params.Callback)
             end
 
+            -- TOGGLE
             function sectionAPI:NewToggle(params)
                 local toggleFrame = Instance.new("Frame", sectionFrame)
                 toggleFrame.Size = UDim2.new(1,-20,0,scaleSize(35))
@@ -191,6 +187,61 @@ function PollutedUiLib.new(config)
                     toggleBtn.BackgroundColor3 = state and Color3.fromRGB(0,255,128) or Color3.fromRGB(60,60,60)
                     params.Callback(state)
                 end)
+            end
+
+            -- SLIDER
+            function sectionAPI:NewSlider(params)
+                local sliderFrame = Instance.new("Frame", sectionFrame)
+                sliderFrame.Size = UDim2.new(1,-20,0,scaleSize(35))
+                sliderFrame.Position = UDim2.new(0,10,0,(#sectionFrame:GetChildren()-1)*scaleSize(40))
+                sliderFrame.BackgroundColor3 = Color3.fromRGB(50,50,50)
+                createUICorner(sliderFrame, 8)
+
+                local label = Instance.new("TextLabel", sliderFrame)
+                label.Size = UDim2.new(0.5,0,1,0)
+                label.BackgroundTransparency = 1
+                label.TextColor3 = Color3.fromRGB(255,255,255)
+                label.Font = Enum.Font.Gotham
+                label.TextSize = scaleSize(16)
+                label.Text = params.Title
+
+                local sliderBtn = Instance.new("Frame", sliderFrame)
+                sliderBtn.Size = UDim2.new((params.Default - params.Min)/(params.Max - params.Min), 0, 1, 0)
+                sliderBtn.BackgroundColor3 = Color3.fromRGB(0,255,128)
+                createUICorner(sliderBtn, 8)
+
+                local dragging = false
+                sliderFrame.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        dragging = true
+                    end
+                end)
+                sliderFrame.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        dragging = false
+                    end
+                end)
+                UserInputService.InputChanged:Connect(function(input)
+                    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                        local relativeX = math.clamp(input.Position.X - sliderFrame.AbsolutePosition.X, 0, sliderFrame.AbsoluteSize.X)
+                        local percent = relativeX / sliderFrame.AbsoluteSize.X
+                        sliderBtn.Size = UDim2.new(percent,0,1,0)
+                        local value = math.floor(params.Min + (params.Max - params.Min) * percent)
+                        params.Callback(value)
+                    end
+                end)
+            end
+
+            -- LABEL
+            function sectionAPI:NewLabel(text)
+                local lbl = Instance.new("TextLabel", sectionFrame)
+                lbl.Size = UDim2.new(1,-20,0,scaleSize(25))
+                lbl.Position = UDim2.new(0,10,0,(#sectionFrame:GetChildren()-1)*scaleSize(30))
+                lbl.BackgroundTransparency = 1
+                lbl.Text = text
+                lbl.TextColor3 = Color3.fromRGB(255,255,255)
+                lbl.Font = Enum.Font.Gotham
+                lbl.TextSize = scaleSize(16)
             end
 
             return sectionAPI
