@@ -1,0 +1,3974 @@
+--==================================================
+-- Polluted Hub / Kick A Lucky Block
+-- getgenv shared-state build
+--==================================================
+
+local SCRIPT_ID = "PollutedBaseUI"
+
+--==================================================
+-- Boot / Cleanup
+--==================================================
+
+do
+    local Old = getgenv()[SCRIPT_ID]
+
+    if Old then
+        if Old.Library and not Old.Library.Unloaded then
+            pcall(function()
+                Old.Library:Unload()
+            end)
+        end
+
+        if Old.Connections then
+            for _, Connection in ipairs(Old.Connections) do
+                pcall(function()
+                    Connection:Disconnect()
+                end)
+            end
+        end
+    end
+
+    local CoreGui = game:GetService("CoreGui")
+
+    for _, Gui in ipairs(CoreGui:GetChildren()) do
+        if Gui:IsA("ScreenGui") then
+            local Name = Gui.Name:lower()
+
+            if Name:find("obsidian") or Name:find("linoria") or Name:find("pollutedbaseui") then
+                pcall(function()
+                    Gui:Destroy()
+                end)
+            end
+        end
+    end
+
+    getgenv()[SCRIPT_ID] = {
+        Connections = {},
+        Alive = true,
+        Functions = {},
+    }
+end
+
+local PH = getgenv()[SCRIPT_ID]
+
+--==================================================
+-- Services
+--==================================================
+
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+local CoreGui = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+
+PH.Services = {
+    Players = Players,
+    MarketplaceService = MarketplaceService,
+    ReplicatedStorage = ReplicatedStorage,
+    RunService = RunService,
+    Stats = Stats,
+}
+
+PH.LocalPlayer = LocalPlayer
+
+--==================================================
+-- Library
+--==================================================
+
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+PH.Library = Library
+PH.ThemeManager = ThemeManager
+PH.SaveManager = SaveManager
+PH.Options = Options
+PH.Toggles = Toggles
+PH.Connections = PH.Connections or {}
+PH.Alive = true
+
+Library.ForceCheckbox = false
+Library.ShowToggleFrameInKeybinds = true
+
+local function TrackConnection(Connection)
+    table.insert(PH.Connections, Connection)
+    return Connection
+end
+
+--==================================================
+-- Config
+--==================================================
+
+local Config = {
+    UIName = "Polluted Hub",
+    Version = "v1.0.0",
+
+    DevKey = "polluted12345",
+    TesterKey = "tester12345",
+
+    DevUsers = {
+        10807761563,
+    },
+
+    TesterUsers = {
+        10807761563,
+    },
+}
+
+local State = {
+
+    --//==================================================
+    --// Farm Toggles
+    --//==================================================
+
+    AutoSquat = false,
+    AutoBonus = false,
+    AutoCollect = false,
+    AutoKick = false,
+
+    AutoPlotUpgrade = false,
+    AutoRebirth = false,
+    AutoSlotUpgrade = false,
+
+    --//==================================================
+    --// Runtime
+    --//==================================================
+
+    FarmRunning = false,
+    FarmBusy = false,
+
+    --//==================================================
+    --// Squat
+    --//==================================================
+
+    SelectedSquatTool = nil,
+
+    AutoSquatDelay = 0.18,
+		AutoSquatPopDelay = 1.5,
+
+    SquatSpeedMultiplier = 1,
+    AutoSquatPopDelay = 0.08,
+
+    LastSquatPop = 0,
+
+    --//==================================================
+    --// Bonus
+    --//==================================================
+
+    AutoBonusDelay = 0.15,
+    LastBonus = 0,
+
+    --//==================================================
+    --// Collect
+    --//==================================================
+
+    AutoCollectInterval = 300,
+
+    LastCollect = 0,
+    LastCollectedAmount = 0,
+
+    --//==================================================
+    --// Kick
+    --//==================================================
+
+    AutoKickDelay = 0.5,
+    AutoKickTimeout = 35,
+
+    -- Faster return timing
+    AutoKickPostDelay = 0.15,
+
+    TeleportBeforeKick = true,
+    AutoPlaceAfterKick = true,
+
+    KickPowerPercent = 1,
+
+    LastKick = 0,
+
+    --//==================================================
+    --// Plot Upgrades
+    --//==================================================
+
+    PlotUpgradeDelay = 2,
+    LastPlotUpgrade = 0,
+
+    --//==================================================
+    --// Rebirth
+    --//==================================================
+
+    RebirthDelay = 5,
+    LastRebirth = 0,
+
+    --//==================================================
+    --// Slot Upgrades
+    --//==================================================
+
+    SelectedUpgradeBrainrot = nil,
+
+    SlotUpgradeDelay = 0.25,
+    LastSlotUpgrade = 0,
+
+    --//==================================================
+    --// Brainrots
+    --//==================================================
+
+    SelectedBrainrot = nil,
+
+    BrainrotSlotMap = {},
+
+    --//==================================================
+    --// Webhooks
+    --//==================================================
+		WebhookURL = "",
+		SelectedWebhookBrainrot = nil,
+		AutoWebhookBrainrots = false,
+		WebhookCooldown = 10,
+		LastWebhookSent = {},
+		KnownBackpackBrainrots = {},
+
+    --//==================================================
+    --// Plot Info
+    --//==================================================
+
+    DetectedPlotName = "Not detected",
+}
+
+local Labels = {}
+local Groups = {
+    Dashboard = {},
+    Farm = {},
+    Kick = {},
+    Inventory = {},
+    Upgrades = {},
+    Shop = {},
+    Events = {},
+    Webhooks = {},
+    Settings = {},
+}
+
+local Modules = {}
+
+PH.Config = Config
+PH.State = State
+PH.Labels = Labels
+PH.Groups = Groups
+PH.Modules = Modules
+
+--==================================================
+-- Utility
+--==================================================
+
+local function SafeClipboard(Text)
+    if setclipboard then
+        setclipboard(Text)
+
+        Library:Notify({
+            Title = "Copied",
+            Description = "Copied to clipboard.",
+            Time = 4,
+        })
+    else
+        Library:Notify({
+            Title = "Clipboard Unsupported",
+            Description = "Your executor does not support setclipboard.",
+            Time = 4,
+        })
+    end
+end
+
+local function SetLabel(Label, Text)
+    if not Label then return end
+
+    if Label.SetText then
+        pcall(function()
+            Label:SetText(Text)
+        end)
+    elseif Label.Set then
+        pcall(function()
+            Label:Set(Text)
+        end)
+    elseif Label.Text ~= nil then
+        pcall(function()
+            Label.Text = Text
+        end)
+    end
+end
+
+local function AddSection(Group, Title)
+    Group:AddLabel(Title, true)
+    Group:AddDivider()
+end
+
+local function AddInfoBlock(Group, Title, Lines)
+    AddSection(Group, Title)
+
+    for _, Line in ipairs(Lines) do
+        Group:AddLabel(Line, true)
+    end
+end
+
+local function IsUserInList(UserIdList)
+    for _, UserId in ipairs(UserIdList) do
+        if LocalPlayer.UserId == UserId then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function IsDevUser()
+    return IsUserInList(Config.DevUsers)
+end
+
+local function IsTesterUser()
+    return IsUserInList(Config.TesterUsers)
+end
+
+local function IsWhitelisted()
+    return IsDevUser() or IsTesterUser()
+end
+
+local function GetAccessLevel()
+    if IsDevUser() then
+        return "Developer"
+    elseif IsTesterUser() then
+        return "Tester"
+    end
+
+    return "Public"
+end
+
+local function AddPreviewImage(Groupbox, Idx, Title, Image)
+    Groupbox:AddLabel(Title, true)
+
+    local Success = pcall(function()
+        Groupbox:AddImage(Idx, {
+            Image = Image,
+            Transparency = 0,
+            BackgroundTransparency = 1,
+            Color = Color3.new(1, 1, 1),
+            RectOffset = Vector2.zero,
+            RectSize = Vector2.zero,
+            ScaleType = Enum.ScaleType.Fit,
+            Height = 180,
+        })
+    end)
+
+    if not Success then
+        Groupbox:AddLabel("Image failed to load.", true)
+    end
+end
+
+--==================================================
+-- Webhook Helpers
+--==================================================
+
+local HttpService = game:GetService("HttpService")
+
+local EntityImageCache = {}
+local PreviewUploadCache = {}
+
+local function GetRequestFunction()
+    return request
+        or http_request
+        or (syn and syn.request)
+        or (fluxus and fluxus.request)
+end
+
+local function GetScreenshotFunction()
+    return getscreenshot or nil
+end
+
+local function GetEntityFolder()
+    return ReplicatedStorage:FindFirstChild("Objects")
+        and ReplicatedStorage.Objects:FindFirstChild("Entities")
+end
+
+local function GetEntityNames()
+    local Folder = GetEntityFolder()
+    local Names = {}
+
+    if Folder then
+        for _, Entity in ipairs(Folder:GetChildren()) do
+            table.insert(Names, Entity.Name)
+        end
+    end
+
+    table.sort(Names)
+
+    if #Names == 0 then
+        table.insert(Names, "No Entities Found")
+    end
+
+    return Names
+end
+
+local function ExtractAssetId(Value)
+    if not Value or Value == "" then
+        return nil
+    end
+
+    return tostring(Value):match("rbxassetid://(%d+)")
+        or tostring(Value):match("id=(%d+)")
+        or tostring(Value):match("assetId=(%d+)")
+        or tostring(Value):match("(%d+)")
+end
+
+local function NormalizeAsset(Id)
+    local AssetId = ExtractAssetId(Id)
+
+    if not AssetId then
+        return nil
+    end
+
+    local Request = GetRequestFunction()
+
+    if not Request then
+        return nil
+    end
+
+    local Url =
+        "https://thumbnails.roblox.com/v1/assets"
+        .. "?assetIds=" .. AssetId
+        .. "&size=420x420"
+        .. "&format=Png"
+        .. "&isCircular=false"
+
+    local Success, Response = pcall(function()
+        return Request({
+            Url = Url,
+            Method = "GET",
+        })
+    end)
+
+    if not Success or not Response or not Response.Body then
+        return nil
+    end
+
+    local Data
+
+    pcall(function()
+        Data = HttpService:JSONDecode(Response.Body)
+    end)
+
+    local Image =
+        Data
+        and Data.data
+        and Data.data[1]
+        and Data.data[1].imageUrl
+
+    if not Image or Image == "" then
+        return nil
+    end
+
+    Image = tostring(Image)
+
+    local LowerImage = string.lower(Image)
+
+    if LowerImage:find("placeholder")
+        or LowerImage:find("default")
+        or LowerImage:find("nofilter")
+        or LowerImage:find("404")
+        or LowerImage:find("error")
+    then
+        return nil
+    end
+
+    return Image
+end
+
+local function GetEntityImage(EntityName)
+    if EntityImageCache[EntityName] then
+        return EntityImageCache[EntityName]
+    end
+
+    local Folder = GetEntityFolder()
+    local Entity = Folder and Folder:FindFirstChild(EntityName)
+
+    if not Entity then
+        return nil
+    end
+
+    local function TryAsset(Value)
+        local Image = NormalizeAsset(Value)
+
+        if Image then
+            EntityImageCache[EntityName] = Image
+            return Image
+        end
+
+        return nil
+    end
+
+    -- Best texture source
+    for _, Item in ipairs(Entity:GetDescendants()) do
+        if Item:IsA("SurfaceAppearance") then
+            if Item.ColorMap and Item.ColorMap ~= "" then
+                local Image = TryAsset(Item.ColorMap)
+                if Image then return Image end
+            end
+        end
+    end
+
+    -- UI/image objects
+    for _, Item in ipairs(Entity:GetDescendants()) do
+        if Item:IsA("Decal") or Item:IsA("Texture") then
+            if Item.Texture and Item.Texture ~= "" then
+                local Image = TryAsset(Item.Texture)
+                if Image then return Image end
+            end
+        end
+
+        if Item:IsA("ImageLabel") or Item:IsA("ImageButton") then
+            if Item.Image and Item.Image ~= "" then
+                local Image = TryAsset(Item.Image)
+                if Image then return Image end
+            end
+        end
+    end
+
+    -- Mesh texture fallback
+    for _, Item in ipairs(Entity:GetDescendants()) do
+        if Item:IsA("MeshPart") then
+            if Item.TextureID and Item.TextureID ~= "" then
+                local Image = TryAsset(Item.TextureID)
+                if Image then return Image end
+            end
+        end
+
+        if Item:IsA("SpecialMesh") then
+            if Item.TextureId and Item.TextureId ~= "" then
+                local Image = TryAsset(Item.TextureId)
+                if Image then return Image end
+            end
+        end
+    end
+
+    return nil
+end
+
+local function CreateEntityPreviewGui(EntityName)
+    local Folder = GetEntityFolder()
+    local Entity = Folder and Folder:FindFirstChild(EntityName)
+    if not Entity then return nil end
+
+    local OldGui = CoreGui:FindFirstChild("PollutedWebhookPreview")
+    if OldGui then OldGui:Destroy() end
+
+    local Gui = Instance.new("ScreenGui")
+    Gui.Name = "PollutedWebhookPreview"
+    Gui.ResetOnSpawn = false
+    Gui.IgnoreGuiInset = true
+    Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    Gui.Parent = CoreGui
+
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(0.66, 0, 0.38, 0)
+    Frame.Position = UDim2.new(0.5, 0, 0.48, 0)
+    Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    Frame.BackgroundColor3 = Color3.fromRGB(10, 10, 16)
+    Frame.BackgroundTransparency = 0.04
+    Frame.BorderSizePixel = 0
+    Frame.Parent = Gui
+
+    Instance.new("UISizeConstraint", Frame).MinSize = Vector2.new(230, 230)
+    Instance.new("UISizeConstraint", Frame).MaxSize = Vector2.new(390, 390)
+
+    local Aspect = Instance.new("UIAspectRatioConstraint")
+    Aspect.AspectRatio = 1
+    Aspect.Parent = Frame
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 18)
+    Corner.Parent = Frame
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(70, 145, 255)
+    Stroke.Thickness = 1.4
+    Stroke.Transparency = 0.18
+    Stroke.Parent = Frame
+
+    local TopBar = Instance.new("Frame")
+    TopBar.Size = UDim2.new(1, 0, 0, 42)
+    TopBar.BackgroundTransparency = 1
+    TopBar.Parent = Frame
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -120, 1, 0)
+    Title.Position = UDim2.new(0, 14, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Font = Enum.Font.GothamBold
+    Title.Text = tostring(EntityName)
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 17
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.TextTruncate = Enum.TextTruncate.AtEnd
+    Title.Parent = TopBar
+
+    local function MakeButton(Text, X)
+        local Button = Instance.new("TextButton")
+        Button.Size = UDim2.fromOffset(30, 30)
+        Button.Position = UDim2.new(1, X, 0.5, -15)
+        Button.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
+        Button.Text = Text
+        Button.Font = Enum.Font.GothamBold
+        Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Button.TextSize = 18
+        Button.Parent = TopBar
+
+        local ButtonCorner = Instance.new("UICorner")
+        ButtonCorner.CornerRadius = UDim.new(1, 0)
+        ButtonCorner.Parent = Button
+
+        return Button
+    end
+
+    local ZoomOut = MakeButton("-", -110)
+    local ZoomIn = MakeButton("+", -74)
+    local Close = MakeButton("×", -38)
+
+    local Viewport = Instance.new("ViewportFrame")
+    Viewport.Size = UDim2.new(1, -16, 1, -58)
+    Viewport.Position = UDim2.new(0, 8, 0, 50)
+    Viewport.BackgroundColor3 = Color3.fromRGB(6, 6, 10)
+    Viewport.BackgroundTransparency = 0.05
+    Viewport.Ambient = Color3.fromRGB(230, 230, 230)
+    Viewport.LightColor = Color3.fromRGB(255, 255, 255)
+    Viewport.LightDirection = Vector3.new(-1, -1, -1)
+    Viewport.Parent = Frame
+
+    local ViewCorner = Instance.new("UICorner")
+    ViewCorner.CornerRadius = UDim.new(0, 14)
+    ViewCorner.Parent = Viewport
+
+    local Camera = Instance.new("Camera")
+    Camera.Parent = Viewport
+    Viewport.CurrentCamera = Camera
+
+    local Clone = Entity:Clone()
+    Clone.Parent = Viewport
+
+    local CF, Size = Clone:GetBoundingBox()
+    local MaxSize = math.max(Size.X, Size.Y, Size.Z)
+
+    Clone:PivotTo(CFrame.new(0, 0, 0))
+
+    local Zoom = 2.25
+    local Rotating = true
+
+    local function UpdateCamera()
+        Camera.CFrame = CFrame.new(
+            Vector3.new(0, MaxSize * 0.22, MaxSize * Zoom),
+            Vector3.new(0, MaxSize * 0.12, 0)
+        )
+    end
+
+    UpdateCamera()
+
+    ZoomIn.MouseButton1Click:Connect(function()
+        Zoom = math.max(1.25, Zoom - 0.2)
+        UpdateCamera()
+    end)
+
+    ZoomOut.MouseButton1Click:Connect(function()
+        Zoom = math.min(4, Zoom + 0.2)
+        UpdateCamera()
+    end)
+
+    local RotationConnection
+    RotationConnection = RunService.RenderStepped:Connect(function()
+        if not Gui.Parent or not Clone.Parent then
+            if RotationConnection then RotationConnection:Disconnect() end
+            return
+        end
+
+        if Rotating then
+            Clone:PivotTo(Clone:GetPivot() * CFrame.Angles(0, math.rad(0.65), 0))
+        end
+    end)
+
+    Viewport.InputBegan:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.Touch or Input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Rotating = not Rotating
+        end
+    end)
+
+    Close.MouseButton1Click:Connect(function()
+        if RotationConnection then RotationConnection:Disconnect() end
+        Gui:Destroy()
+    end)
+
+    return Gui
+end
+
+local function TryCaptureEntityPreview(EntityName)
+    if PreviewUploadCache[EntityName] then
+        return PreviewUploadCache[EntityName]
+    end
+
+    local ScreenshotFunction = GetScreenshotFunction()
+
+    if not ScreenshotFunction then
+        return nil
+    end
+
+    local Gui = CreateEntityPreviewGui(EntityName)
+
+    if not Gui then
+        return nil
+    end
+
+    task.wait(0.85)
+
+    local Success, Screenshot = pcall(function()
+        return ScreenshotFunction()
+    end)
+
+    pcall(function()
+        Gui:Destroy()
+    end)
+
+    if not Success or not Screenshot or Screenshot == "" then
+        return nil
+    end
+
+    PreviewUploadCache[EntityName] = Screenshot
+    return Screenshot
+end
+
+local function SendBrainrotWebhook(BrainrotName, ExtraText)
+    if State.WebhookURL == "" then
+        Library:Notify({
+            Title = "Webhook",
+            Description = "Set your webhook URL first.",
+            Time = 3,
+        })
+        return false
+    end
+
+    local Request = GetRequestFunction()
+
+    if not Request then
+        Library:Notify({
+            Title = "Webhook",
+            Description = "Your executor does not support HTTP requests.",
+            Time = 3,
+        })
+        return false
+    end
+
+    local Image =
+        TryCaptureEntityPreview(BrainrotName)
+        or GetEntityImage(BrainrotName)
+
+    print("Webhook Brainrot:", BrainrotName)
+    print("Webhook Image:", Image or "NO IMAGE FOUND")
+
+    local Embed = {
+        title = "🧠 Brainrot Found",
+        description = ExtraText or "A new brainrot was detected and added to inventory.",
+        color = 5763719,
+
+        fields = {
+            {
+                name = "🎯 Brainrot",
+                value = "```" .. tostring(BrainrotName) .. "```",
+                inline = true,
+            },
+            {
+                name = "👤 Player",
+                value = "```" .. tostring(LocalPlayer.Name) .. "```",
+                inline = true,
+            },
+            {
+                name = "🌍 Server",
+                value = "```" .. string.sub(tostring(game.JobId), 1, 12) .. "```",
+                inline = true,
+            },
+            {
+                name = "🎮 Game",
+                value = "```" .. tostring(GameInfo and GameInfo.Name or game.Name) .. "```",
+                inline = false,
+            },
+        },
+
+        footer = {
+            text = "Polluted Hub • Brainrot Logger",
+        },
+
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+    if Image and tostring(Image):find("^https?://") then
+        Embed.thumbnail = {
+            url = Image,
+        }
+    end
+
+    local Payload = {
+        username = "Polluted Hub",
+        avatar_url = "https://i.imgur.com/8wmK8SE.png",
+        embeds = {
+            Embed,
+        },
+    }
+
+    local Success = pcall(function()
+        Request({
+            Url = State.WebhookURL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json",
+            },
+            Body = HttpService:JSONEncode(Payload),
+        })
+    end)
+
+    return Success
+end
+
+local function GetBackpackBrainrots()
+    local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local Found = {}
+
+    if not Backpack then
+        return Found
+    end
+
+    local EntityFolder = GetEntityFolder()
+
+    if not EntityFolder then
+        return Found
+    end
+
+    for _, Tool in ipairs(Backpack:GetChildren()) do
+        if Tool:IsA("Tool") and EntityFolder:FindFirstChild(Tool.Name) then
+            Found[Tool.Name] = true
+        end
+    end
+
+    return Found
+end
+
+local function SaveCurrentBackpackBrainrots()
+    State.KnownBackpackBrainrots = GetBackpackBrainrots()
+end
+
+local function SendNewBackpackBrainrots()
+    State.KnownBackpackBrainrots = State.KnownBackpackBrainrots or {}
+
+    local Current = GetBackpackBrainrots()
+
+    for BrainrotName, _ in pairs(Current) do
+        if not State.KnownBackpackBrainrots[BrainrotName] then
+            local LastSent = State.LastWebhookSent[BrainrotName] or 0
+
+            if tick() - LastSent >= State.WebhookCooldown then
+                State.LastWebhookSent[BrainrotName] = tick()
+
+                SendBrainrotWebhook(
+                    BrainrotName,
+                    "New brainrot added to backpack after a successful kick."
+                )
+            end
+        end
+    end
+
+    State.KnownBackpackBrainrots = Current
+end
+
+--==================================================
+-- Game Info
+--==================================================
+
+local ProductInfo = {
+    Name = "Unknown Game",
+    Creator = {
+        Name = "Unknown",
+        CreatorType = "Unknown",
+    },
+    IconImageAssetId = 0,
+    Created = "Unknown",
+    Updated = "Unknown",
+}
+
+pcall(function()
+    ProductInfo = MarketplaceService:GetProductInfo(game.PlaceId)
+end)
+
+local GameInfo = {
+    Name = ProductInfo.Name or "Unknown Game",
+    CreatorName = ProductInfo.Creator and ProductInfo.Creator.Name or "Unknown",
+    CreatorType = ProductInfo.Creator and ProductInfo.Creator.CreatorType or "Unknown",
+    IconAssetId = ProductInfo.IconImageAssetId or 0,
+    Created = tostring(ProductInfo.Created or "Unknown"),
+    Updated = tostring(ProductInfo.Updated or "Unknown"),
+    AvatarImage = "",
+    GameIconImage = "",
+}
+
+pcall(function()
+    GameInfo.AvatarImage = Players:GetUserThumbnailAsync(
+        LocalPlayer.UserId,
+        Enum.ThumbnailType.HeadShot,
+        Enum.ThumbnailSize.Size420x420
+    )
+end)
+
+if GameInfo.AvatarImage == "" then
+    GameInfo.AvatarImage = "rbxthumb://type=AvatarHeadShot&id="
+        .. tostring(LocalPlayer.UserId)
+        .. "&w=420&h=420"
+end
+
+GameInfo.GameIconImage = "rbxassetid://" .. tostring(GameInfo.IconAssetId)
+
+if GameInfo.IconAssetId == 0 then
+    GameInfo.GameIconImage = "rbxthumb://type=Asset&id=" .. tostring(game.PlaceId) .. "&w=420&h=420"
+end
+
+PH.GameInfo = GameInfo
+
+--==================================================
+-- Loading
+--==================================================
+
+local function RunLoadingScreen()
+    local Loading = Library:CreateLoading({
+        Title = Config.UIName,
+        Icon = 95816097006870,
+        TotalSteps = 8,
+
+        LoadingIcon = "sparkles",
+        LoadingIconTweenTime = 1.05,
+        LoadingIconColor = Color3.fromRGB(120, 170, 255),
+
+        ShowSidebar = false,
+        WindowWidth = 560,
+        WindowHeight = 350,
+        AutoResizeHeight = true,
+        ContentWidth = 350,
+        SidebarWidth = 210,
+    })
+
+    local function Step(Number, Message, Description, WaitTime)
+        Loading:SetCurrentStep(Number)
+        Loading:SetMessage(Message)
+        Loading:SetDescription(Description)
+        task.wait(WaitTime or 0.35)
+    end
+
+    local Success, ErrorMessage = pcall(function()
+        Step(1, "Booting interface...", "Cleaning old UI sessions and preparing a fresh load.", 0.45)
+        Step(2, "Checking player...", "Reading account information and local permissions.", 0.45)
+
+        Loading:ShowSidebarPage(true)
+
+        Loading.Sidebar:AddLabel("Account")
+        Loading.Sidebar:AddDivider()
+        Loading.Sidebar:AddLabel("Username: " .. LocalPlayer.Name)
+        Loading.Sidebar:AddLabel("Display: " .. LocalPlayer.DisplayName)
+        Loading.Sidebar:AddLabel("UserId: " .. tostring(LocalPlayer.UserId))
+
+        Loading.Sidebar:AddDivider()
+        Loading.Sidebar:AddLabel("Access: " .. GetAccessLevel())
+        Loading.Sidebar:AddLabel("Key Tab: " .. (IsWhitelisted() and "Visible" or "Hidden"))
+
+        if IsDevUser() then
+            Loading:SetLoadingIcon("code")
+            Loading:SetLoadingIconColor(Color3.fromRGB(120, 255, 170))
+        elseif IsTesterUser() then
+            Loading:SetLoadingIcon("flask-conical")
+            Loading:SetLoadingIconColor(Color3.fromRGB(255, 200, 120))
+        else
+            Loading:SetLoadingIcon("user")
+            Loading:SetLoadingIconColor(Color3.fromRGB(160, 160, 160))
+        end
+
+        Step(3, "Verifying access...", "Checking developer and tester whitelist tables.", 0.55)
+        Step(4, "Loading modules...", "Connecting theme manager, save manager, and UI options.", 0.5)
+
+        Loading.Sidebar:AddDivider()
+        Loading.Sidebar:AddLabel("Game")
+        Loading.Sidebar:AddLabel("Name: " .. GameInfo.Name)
+        Loading.Sidebar:AddLabel("Creator: " .. GameInfo.CreatorName)
+        Loading.Sidebar:AddLabel("PlaceId: " .. tostring(game.PlaceId))
+        Loading.Sidebar:AddLabel("Version: " .. Config.Version)
+
+        Step(5, "Preparing layout...", "Creating profile, game info, and feature tabs.", 0.55)
+        Step(6, "Applying preferences...", "Loading saved configs, themes, menu bind, and DPI settings.", 0.55)
+        Step(7, "Final cleanup...", "Removing duplicate windows and stale interface objects.", 0.45)
+
+        Loading:SetLoadingIcon("badge-check")
+        Loading:SetLoadingIconColor(Color3.fromRGB(90, 255, 140))
+
+        Step(8, "Ready.", "Opening the fresh interface now.", 0.35)
+    end)
+
+    if not Success then
+        Loading:SetLoadingIcon("triangle-alert")
+        Loading:SetLoadingIconTweenTime(0)
+        Loading:SetLoadingIconColor(Color3.fromRGB(255, 90, 90))
+
+        Loading:ShowErrorPage(true)
+        Loading:SetErrorMessage("Failed to load UI:\n" .. tostring(ErrorMessage))
+
+        Loading:SetErrorButtons({
+            Retry = {
+                Title = "Retry",
+                Variant = "Primary",
+                Callback = function()
+                    Loading:Destroy()
+                    RunLoadingScreen()
+                end,
+            },
+
+            Close = {
+                Title = "Close",
+                Variant = "Secondary",
+                Callback = function()
+                    Loading:Destroy()
+                end,
+            },
+        })
+
+        return false
+    end
+
+    Loading:Continue()
+    return true
+end
+
+RunLoadingScreen()
+
+--==================================================
+-- Window / Tabs
+--==================================================
+
+local Window = Library:CreateWindow({
+    Title = Config.UIName .. " | Kick A Lucky Block",
+    Footer = "build " .. Config.Version .. "  |  right alt to toggle",
+    Icon = 95816097006870,
+    NotifySide = "Right",
+    ShowCustomCursor = true,
+    Center = true,
+    AutoShow = true,
+    Resizable = true,
+})
+
+local Tabs = {
+    Dashboard = Window:AddTab("Dashboard", "layout-dashboard"),
+    Farm = Window:AddTab("Farm", "route"),
+    Kick = Window:AddTab("Kick", "footprints"),
+    Inventory = Window:AddTab("Inventory", "package"),
+    Upgrades = Window:AddTab("Upgrades", "trending-up"),
+    Shop = Window:AddTab("Shop", "shopping-cart"),
+    Events = Window:AddTab("Events", "cloud-sun"),
+		Webhooks = Window:AddTab("Webhooks", "webhook"),
+    Settings = Window:AddTab("UI Settings", "settings"),
+}
+
+if IsWhitelisted() then
+    Tabs.Key = Window:AddKeyTab("Key System")
+end
+
+PH.Window = Window
+PH.Tabs = Tabs
+
+--==================================================
+-- Network / Modules
+--==================================================
+
+local NetworkFolder = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Packages"):WaitForChild("Network")
+
+local NetworkModule
+pcall(function()
+    NetworkModule = require(NetworkFolder)
+end)
+
+Modules.NetworkModule = NetworkModule
+Modules.NetworkFolder = NetworkFolder
+
+pcall(function()
+    Modules.KickServiceClient = require(ReplicatedStorage.Modules.ServicesLoader.KickServiceClient)
+end)
+
+pcall(function()
+    Modules.KickController = require(ReplicatedStorage.Modules.ControllerLoader.KickController)
+end)
+
+pcall(function()
+    Modules.SpeedServiceClient = require(ReplicatedStorage.Modules.ServicesLoader.SpeedServiceClient)
+end)
+
+pcall(function()
+    Modules.WeatherServiceClient = require(ReplicatedStorage.Modules.ServicesLoader.WeatherService_Client)
+end)
+
+pcall(function()
+    Modules.TimedUpgradesServiceClient = require(ReplicatedStorage.Modules.ServicesLoader.TimedUpgradesServiceClient)
+end)
+
+pcall(function()
+    Modules.ServerLuckClient = require(ReplicatedStorage.Modules.ServicesLoader.ServerLuckClient)
+end)
+
+local function FireRemote(Name, ...)
+    local Args = { ... }
+
+    if NetworkModule and NetworkModule.FireServer then
+        local ok = pcall(function()
+            NetworkModule.FireServer(Name, unpack(Args))
+        end)
+
+        if ok then
+            return true
+        end
+    end
+
+    local Remote = NetworkFolder:FindFirstChild("rev_" .. Name)
+
+    if not Remote then
+        Remote = NetworkFolder:WaitForChild("rev_" .. Name, 5)
+    end
+
+    if Remote then
+        return pcall(function()
+            Remote:FireServer(unpack(Args))
+        end)
+    end
+
+    return false
+end
+
+local function InvokeRemote(Name, ...)
+    local Args = { ... }
+
+    if NetworkModule and NetworkModule.InvokeServer then
+        local ok, result = pcall(function()
+            return NetworkModule.InvokeServer(Name, unpack(Args))
+        end)
+
+        if ok then
+            return true, result
+        end
+    end
+
+    local Remote = NetworkFolder:FindFirstChild("ref_" .. Name)
+
+    if not Remote then
+        Remote = NetworkFolder:WaitForChild("ref_" .. Name, 5)
+    end
+
+    if Remote then
+        return pcall(function()
+            return Remote:InvokeServer(unpack(Args))
+        end)
+    end
+
+    return false, nil
+end
+
+local function SetKickPowerPercent(Percent)
+    Percent = math.clamp(Percent or 1, 0.01, 1)
+    State.KickPowerPercent = Percent
+
+    if Modules.KickServiceClient then
+        pcall(function()
+            Modules.KickServiceClient.Percent = Percent
+        end)
+    end
+end
+
+--==================================================
+-- Character / Plot Helpers
+--==================================================
+
+local function GetCharacter()
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
+
+local function GetHumanoid()
+    local Character = GetCharacter()
+    return Character and Character:FindFirstChildOfClass("Humanoid")
+end
+
+local function GetRoot()
+    local Character = LocalPlayer.Character
+    return Character and Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function KeepSquatMovementUnlocked()
+    local Character = LocalPlayer.Character
+    if not Character then return end
+
+    local Root = Character:FindFirstChild("HumanoidRootPart") or Character.PrimaryPart
+    local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+
+    if Root and Root.Anchored then
+        Root.Anchored = false
+    end
+
+    if Humanoid then
+        Humanoid.PlatformStand = false
+        Humanoid.AutoRotate = true
+    end
+end
+
+local function StartSquatMoveUnlocker()
+    task.spawn(function()
+        while State.AutoSquat and not Library.Unloaded and SCRIPT_CACHE.Alive do
+            KeepSquatMovementUnlocked()
+            task.wait()
+        end
+    end)
+end
+
+local function GetEquippedTool()
+    local Character = LocalPlayer.Character
+    if not Character then return nil end
+
+    for _, Item in ipairs(Character:GetChildren()) do
+        if Item:IsA("Tool") then
+            return Item
+        end
+    end
+
+    return nil
+end
+
+local function ReadPlotOwner(PlotOwner)
+    if not PlotOwner then return "" end
+
+    if PlotOwner:IsA("StringValue") then
+        return PlotOwner.Value
+    end
+
+    if PlotOwner:IsA("ObjectValue") and PlotOwner.Value then
+        return PlotOwner.Value.Name
+    end
+
+    if PlotOwner:IsA("TextLabel") or PlotOwner:IsA("TextButton") then
+        return PlotOwner.Text
+    end
+
+    local TextObject = PlotOwner:FindFirstChildWhichIsA("TextLabel", true)
+
+    if TextObject then
+        return TextObject.Text
+    end
+
+    return ""
+end
+
+local function GetPlayerPlot()
+    local Plots = workspace:FindFirstChild("Plots")
+
+    if not Plots then
+        State.DetectedPlotName = "Not detected"
+        SetLabel(Labels.PlotStatus, "Detected Plot: not found")
+        return nil
+    end
+
+    for _, Plot in ipairs(Plots:GetChildren()) do
+        local Decorations = Plot:FindFirstChild("Decorations")
+        local PlotOwner = Decorations and Decorations:FindFirstChild("PlotOwner")
+        local OwnerText = ReadPlotOwner(PlotOwner)
+
+        if OwnerText == LocalPlayer.Name or OwnerText == LocalPlayer.DisplayName then
+            State.DetectedPlotName = Plot.Name
+            SetLabel(Labels.PlotStatus, "Detected Plot: " .. Plot.Name)
+            return Plot
+        end
+    end
+
+    State.DetectedPlotName = "Not detected"
+    SetLabel(Labels.PlotStatus, "Detected Plot: not found")
+    return nil
+end
+
+local function GetPlayerSlotsFolder()
+    local Plot = GetPlayerPlot()
+    return Plot and Plot:FindFirstChild("Slots")
+end
+
+local function GetAvailableSlot()
+    local Slots = GetPlayerSlotsFolder()
+    if not Slots then return nil end
+
+    local OrderedSlots = {}
+
+    for _, Slot in ipairs(Slots:GetChildren()) do
+        table.insert(OrderedSlots, {
+            Slot = Slot,
+            Number = tonumber(Slot.Name:match("%d+")) or 0,
+        })
+    end
+
+    table.sort(OrderedSlots, function(a, b)
+        return a.Number < b.Number
+    end)
+
+    for _, Data in ipairs(OrderedSlots) do
+        local PlacedPart = Data.Slot:FindFirstChild("PlacedPart")
+
+        if not PlacedPart or #PlacedPart:GetChildren() == 0 then
+            return Data.Slot
+        end
+    end
+
+    return nil
+end
+
+--==================================================
+-- Farm / Inventory Helpers
+--==================================================
+local function GetSquatTools()
+    local Tools = {}
+    local Seen = {}
+
+    local WeightModels = ReplicatedStorage:FindFirstChild("Objects")
+    WeightModels = WeightModels and WeightModels:FindFirstChild("WeightModels")
+
+    if WeightModels then
+        for _, Weight in ipairs(WeightModels:GetChildren()) do
+            if not Seen[Weight.Name] then
+                Seen[Weight.Name] = true
+                table.insert(Tools, Weight.Name)
+            end
+        end
+    end
+
+    table.sort(Tools)
+
+    if #Tools == 0 then
+        table.insert(Tools, "No Weights Found")
+    end
+
+    return Tools
+end
+
+local function GetBestBackpackWeightName()
+    local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    if not Backpack then return nil end
+
+    local WeightNames = GetSquatTools()
+
+    for _, WeightName in ipairs(WeightNames) do
+        if WeightName ~= "No Tools Found" then
+            local Tool = Backpack:FindFirstChild(WeightName)
+            if Tool and Tool:IsA("Tool") then
+                return WeightName
+            end
+        end
+    end
+
+    return nil
+end
+
+local function NormalizeName(Name)
+    return tostring(Name or "")
+        :lower()
+        :gsub("%s+", "")
+        :gsub("%p+", "")
+end
+
+local function FindToolByName(ToolName)
+    local Character = LocalPlayer.Character
+    local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+
+    local Wanted = NormalizeName(ToolName)
+
+    local function Scan(Container)
+        if not Container then
+            return nil
+        end
+
+        local ExactTool = Container:FindFirstChild(ToolName)
+
+        if ExactTool and ExactTool:IsA("Tool") then
+            return ExactTool
+        end
+
+        for _, Item in ipairs(Container:GetChildren()) do
+            if Item:IsA("Tool") then
+                local ItemName = NormalizeName(Item.Name)
+
+                if ItemName == Wanted then
+                    return Item
+                end
+            end
+        end
+
+        for _, Item in ipairs(Container:GetChildren()) do
+            if Item:IsA("Tool") then
+                local ItemName = NormalizeName(Item.Name)
+
+                if ItemName:find(Wanted, 1, true) or Wanted:find(ItemName, 1, true) then
+                    return Item
+                end
+            end
+        end
+
+        return nil
+    end
+
+    return Scan(Character) or Scan(Backpack)
+end
+
+local function EquipTool(Tool)
+    if not Tool then return false end
+
+    local Character = GetCharacter()
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+    if not Humanoid then return false end
+
+    if Tool.Parent == Character then
+        return true
+    end
+
+    pcall(function()
+        Humanoid:UnequipTools()
+    end)
+
+    task.wait(0.05)
+
+    pcall(function()
+        Humanoid:EquipTool(Tool)
+    end)
+
+    return Tool.Parent == Character
+end
+
+local function UnequipTools()
+    local Humanoid = GetHumanoid()
+
+    if Humanoid then
+        pcall(function()
+            Humanoid:UnequipTools()
+        end)
+    end
+end
+
+local function KeepSquatEquipped()
+    if not State.SelectedSquatTool or State.SelectedSquatTool == "No Tools Found" then
+        return false
+    end
+
+    local Tool = FindToolByName(State.SelectedSquatTool)
+
+    if Tool then
+        return EquipTool(Tool)
+    end
+
+    return false
+end
+
+local function SpeedUpSquatAnimation()
+    local Character = LocalPlayer.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+    local Animator = Humanoid and Humanoid:FindFirstChildOfClass("Animator")
+
+    if not Animator then
+        return
+    end
+
+    for _, Track in ipairs(Animator:GetPlayingAnimationTracks()) do
+        local Name = string.lower(Track.Name or "")
+
+        if Name:find("squat")
+        or Name:find("weight")
+        or Name:find("barbell")
+        or Name:find("dumbbell") then
+            pcall(function()
+                local MatchedSpeed = math.clamp(0.16 / (State.AutoSquatPopDelay or 0.08), 1, 5)
+								 Track:AdjustSpeed(MatchedSpeed)
+            end)
+        end
+    end
+end
+
+local function FastSquatPop()
+    local KickUpgradesUI
+
+    pcall(function()
+        KickUpgradesUI = require(ReplicatedStorage.Modules.UILoader.KickUpgradesUI)
+    end)
+
+    if not KickUpgradesUI then
+        return false
+    end
+
+    pcall(function()
+        KickUpgradesUI:Pop()
+    end)
+
+    return true
+end
+
+local function ClickBonusButton()
+    local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if not PlayerGui then return false end
+
+    local KickUpgrades = PlayerGui:FindFirstChild("KickUpgrades")
+    if not KickUpgrades then return false end
+
+    local Target = KickUpgrades:GetChildren()[4]
+    if not Target then return false end
+
+    pcall(function() firesignal(Target.MouseButton1Down) end)
+    pcall(function() firesignal(Target.MouseButton1Click) end)
+    pcall(function() firesignal(Target.MouseButton1Up) end)
+    pcall(function() firesignal(Target.Activated) end)
+
+    return true
+end
+
+local function GetButtonsFolder()
+    local Plot = GetPlayerPlot()
+    return Plot and Plot:FindFirstChild("Buttons")
+end
+
+local function GetCollectButtons()
+    local ButtonsFolder = GetButtonsFolder()
+    local Buttons = {}
+
+    if not ButtonsFolder then
+        return Buttons
+    end
+
+    for _, Item in ipairs(ButtonsFolder:GetDescendants()) do
+        if Item:IsA("TouchTransmitter") then
+            local Part = Item.Parent
+
+            if Part and Part:IsA("BasePart") then
+                table.insert(Buttons, Part)
+            end
+        end
+    end
+
+    table.sort(Buttons, function(a, b)
+        return a.Name < b.Name
+    end)
+
+    return Buttons
+end
+
+local function TeleportNear(Part)
+    local Root = GetRoot()
+
+    if not Root or not Part then
+        return false
+    end
+
+    pcall(function()
+        Root.CFrame = Part.CFrame + Vector3.new(0, 3, 0)
+    end)
+
+    return true
+end
+
+local function FireTouchPart(Part)
+    local Root = GetRoot()
+
+    if not Root or not Part then
+        return false
+    end
+
+    pcall(function()
+        firetouchinterest(Root, Part, 0)
+        task.wait(0.05)
+        firetouchinterest(Root, Part, 1)
+    end)
+
+    return true
+end
+
+local function CollectAllButtons()
+    local Buttons = GetCollectButtons()
+    State.LastCollectedAmount = 0
+
+    if #Buttons == 0 then
+        SetLabel(Labels.CollectStatus, "Last Collect: no buttons found")
+        return 0
+    end
+
+    for _, Part in ipairs(Buttons) do
+        if not State.AutoCollect and State.FarmRunning then
+            break
+        end
+
+        if TeleportNear(Part) then
+            task.wait(0.2)
+
+            if FireTouchPart(Part) then
+                State.LastCollectedAmount += 1
+            end
+
+            task.wait(0.15)
+        end
+    end
+
+    SetLabel(Labels.CollectStatus, "Last Collect: " .. tostring(State.LastCollectedAmount) .. " buttons")
+    return State.LastCollectedAmount
+end
+
+local function GetMutationNames()
+    local Mutations = {}
+    local Folder = ReplicatedStorage:FindFirstChild("Objects")
+
+    Folder = Folder and Folder:FindFirstChild("VFX")
+    Folder = Folder and Folder:FindFirstChild("MutationVFX")
+
+    if Folder then
+        for _, Mutation in ipairs(Folder:GetChildren()) do
+            Mutations[Mutation.Name] = true
+        end
+    end
+
+    return Mutations
+end
+
+local function GetBrainrotMutation(BrainrotModel)
+    local ValidMutations = GetMutationNames()
+
+    for _, Child in ipairs(BrainrotModel:GetChildren()) do
+        if ValidMutations[Child.Name] then
+            return Child.Name
+        end
+    end
+
+    return "Normal"
+end
+
+local function GetBrainrotsOnPlot()
+    local SlotsFolder = GetPlayerSlotsFolder()
+    local Brainrots = {}
+
+    State.BrainrotSlotMap = {}
+
+    if not SlotsFolder then
+        table.insert(Brainrots, "No Brainrots Found")
+        SetLabel(Labels.BrainrotCount, "Brainrots Found: 0")
+        return Brainrots
+    end
+
+    for _, Slot in ipairs(SlotsFolder:GetChildren()) do
+        local SlotNumber = tonumber(Slot.Name:match("%d+"))
+        local PlacedPart = Slot:FindFirstChild("PlacedPart")
+
+        if SlotNumber and PlacedPart then
+            local BrainrotModel = nil
+
+            for _, Child in ipairs(PlacedPart:GetChildren()) do
+                BrainrotModel = Child
+                break
+            end
+
+            if BrainrotModel then
+                local DisplayName = "Slot "
+                    .. tostring(SlotNumber)
+                    .. " | "
+                    .. GetBrainrotMutation(BrainrotModel)
+                    .. " | "
+                    .. BrainrotModel.Name
+
+                table.insert(Brainrots, DisplayName)
+                State.BrainrotSlotMap[DisplayName] = SlotNumber
+            end
+        end
+    end
+
+    table.sort(Brainrots, function(a, b)
+        local SlotA = tonumber(a:match("Slot%s+(%d+)")) or 0
+        local SlotB = tonumber(b:match("Slot%s+(%d+)")) or 0
+
+        if SlotA == SlotB then
+            return a < b
+        end
+
+        return SlotA < SlotB
+    end)
+
+    SetLabel(Labels.BrainrotCount, "Brainrots Found: " .. tostring(#Brainrots))
+
+    if #Brainrots == 0 then
+        table.insert(Brainrots, "No Brainrots Found")
+    end
+
+    return Brainrots
+end
+
+local function PickupBrainrot(BrainrotName)
+    local SlotNumber = State.BrainrotSlotMap[BrainrotName]
+
+    if not SlotNumber then
+        return false
+    end
+
+    FireRemote("S_Interact", SlotNumber)
+    task.wait(0.25)
+
+    return true
+end
+
+local function ExtractBrainrotName(BrainrotDisplayName)
+    return BrainrotDisplayName:match("Slot%s+%d+%s|%s.-%s|%s(.+)$") or BrainrotDisplayName
+end
+
+local function EquipBrainrotFromBackpack(BrainrotDisplayName)
+    local BrainrotName = ExtractBrainrotName(BrainrotDisplayName)
+    local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local Humanoid = GetHumanoid()
+
+    if not Backpack or not Humanoid then
+        return false
+    end
+
+    local Tool = Backpack:FindFirstChild(BrainrotName)
+
+    if not Tool then
+        for _, Item in ipairs(Backpack:GetChildren()) do
+            if Item:IsA("Tool") and Item.Name:find(BrainrotName, 1, true) then
+                Tool = Item
+                break
+            end
+        end
+    end
+
+    if not Tool or not Tool:IsA("Tool") then
+        return false
+    end
+
+    pcall(function()
+        Humanoid:UnequipTools()
+    end)
+
+    task.wait(0.1)
+
+    pcall(function()
+        Humanoid:EquipTool(Tool)
+    end)
+
+    task.wait(0.25)
+
+    return Tool.Parent == LocalPlayer.Character
+end
+
+local function SellHeldBrainrot()
+    local ok = InvokeRemote("B_Sell")
+    return ok
+end
+
+local function SellAllInventoryBrainrots()
+    local ok = InvokeRemote("B_SellAll")
+    return ok
+end
+
+local function SellSelectedBrainrot()
+    if not State.SelectedBrainrot or State.SelectedBrainrot == "No Brainrots Found" then
+        return false, "Pick a valid brainrot first."
+    end
+
+    if not PickupBrainrot(State.SelectedBrainrot) then
+        return false, "Could not pick up selected brainrot."
+    end
+
+    task.wait(0.35)
+
+    if not EquipBrainrotFromBackpack(State.SelectedBrainrot) then
+        return false, "Picked it up, but could not equip it."
+    end
+
+    task.wait(0.25)
+
+    if SellHeldBrainrot() then
+        return true, "Sold: " .. tostring(State.SelectedBrainrot)
+    end
+
+    return false, "Sell failed."
+end
+
+--==================================================
+-- Kick Helpers
+--==================================================
+
+local function GetKickReadyPart()
+    local Areas = workspace:FindFirstChild("Areas")
+    local KickReady = Areas and Areas:FindFirstChild("KickReady")
+
+    if not KickReady then
+        return nil
+    end
+
+    if KickReady:IsA("BasePart") then
+        return KickReady
+    end
+
+    return KickReady:FindFirstChildWhichIsA("BasePart", true)
+end
+
+local function TeleportToKickReady()
+    local Root = GetRoot()
+    local KickReadyPart = GetKickReadyPart()
+
+    if not Root or not KickReadyPart then
+        return false
+    end
+
+    pcall(function()
+        Root.CFrame = KickReadyPart.CFrame + Vector3.new(0, 4, 0)
+    end)
+
+    return true
+end
+
+local function FireKickEvent()
+    return FireRemote("KickEvent", 1, 1)
+end
+
+local function PlaceBrainrotInSlot(SlotNumber)
+    return FireRemote("S_Interact", SlotNumber)
+end
+
+local function PlaceOrStoreBrainrot()
+    if not State.AutoPlaceAfterKick then
+        SetLabel(Labels.KickStatus, "Status: reward kept in inventory")
+        return false
+    end
+
+    local Slot = GetAvailableSlot()
+
+    if not Slot then
+        SetLabel(Labels.KickStatus, "Status: no free slots")
+        return false
+    end
+
+    local SlotNumber = tonumber(Slot.Name:match("%d+"))
+
+    if not SlotNumber then
+        return false
+    end
+
+    PlaceBrainrotInSlot(SlotNumber)
+    SetLabel(Labels.KickStatus, "Status: placed in Slot " .. tostring(SlotNumber))
+
+    return true
+end
+
+local function MoveBackTo(Position)
+    local Character = LocalPlayer.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+    local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+
+    if not Humanoid or not Root then
+        return false
+    end
+
+    local StartTime = tick()
+    local Timeout = 20
+
+    Humanoid:MoveTo(Position)
+
+    while tick() - StartTime < Timeout do
+        if Library.Unloaded then
+            return false
+        end
+
+        if not Root.Parent then
+            return false
+        end
+
+        if (Root.Position - Position).Magnitude <= 7 then
+            return true
+        end
+
+        Humanoid:MoveTo(Position)
+        task.wait(0.15)
+    end
+
+    return false
+end
+
+local function IsGuiReallyVisible(Gui)
+    if not Gui then return false end
+
+    local Current = Gui
+
+    while Current do
+        if Current:IsA("GuiObject") and Current.Visible == false then
+            return false
+        end
+
+        if Current:IsA("ScreenGui") and Current.Enabled == false then
+            return false
+        end
+
+        Current = Current.Parent
+    end
+
+    return true
+end
+
+local function FindRunGui()
+    local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if not PlayerGui then return nil end
+
+    local HUD = PlayerGui:FindFirstChild("HUD")
+    if not HUD then return nil end
+
+    return HUD:FindFirstChild("Run", true)
+end
+
+local function WaitForKickStart()
+    local Start = tick()
+
+    while tick() - Start < State.AutoKickTimeout do
+        if not State.AutoKick and not State.FarmBusy then
+            return false
+        end
+
+        if Modules.KickController and Modules.KickController.InMinigame == true then
+            return true
+        end
+
+        local RunGui = FindRunGui()
+
+        if RunGui and IsGuiReallyVisible(RunGui) then
+            return true
+        end
+
+        task.wait(0.05)
+    end
+
+    return false
+end
+
+local function WaitForKickEnd()
+    local Start = tick()
+
+    while tick() - Start < State.AutoKickTimeout do
+        if not State.AutoKick and not State.FarmBusy then
+            return false
+        end
+
+        if Modules.KickController and Modules.KickController.InMinigame == false then
+            return true
+        end
+
+        task.wait(0.05)
+    end
+
+    return true
+end
+
+local function SetKickStatus(Text)
+    SetLabel(Labels.KickStatus, "Status: " .. Text)
+end
+
+local function RunKickCycle()
+    local KickReadyPart = GetKickReadyPart()
+		SaveCurrentBackpackBrainrots()
+
+    if not KickReadyPart then
+        SetKickStatus("KickReady not found")
+        return false
+    end
+
+    if State.TeleportBeforeKick then
+        SetKickStatus("teleporting to KickReady")
+
+        if not TeleportToKickReady() then
+            SetKickStatus("failed to teleport")
+            return false
+        end
+
+        task.wait(0.5)
+    end
+
+    SetKickStatus("kicking")
+    SetKickPowerPercent(State.KickPowerPercent)
+    FireKickEvent()
+
+    SetKickStatus("waiting for kick minigame")
+
+    if not WaitForKickStart() then
+        SetKickStatus("Run UI timeout")
+        return false
+    end
+
+    SetKickStatus("kick detected")
+    WaitForKickEnd()
+    task.wait(State.AutoKickPostDelay)
+
+    SetKickStatus("returning to KickReady")
+
+    if not MoveBackTo(KickReadyPart.Position) then
+        SetKickStatus("return failed")
+        return false
+    end
+
+    task.wait(2)
+    PlaceOrStoreBrainrot()
+		SendNewBackpackBrainrots()
+
+    return true
+end
+
+--==================================================
+-- Upgrade / Event Helpers
+--==================================================
+
+local function FirePlotUpgrade()
+    FireRemote("bs_upgrade")
+end
+
+local function FireRebirth()
+    FireRemote("RebirthRequest")
+end
+
+local function UpgradeBrainrotSlot(SlotNumber)
+    FireRemote("B_Upgrade", SlotNumber)
+end
+
+local function GetSelectedUpgradeSlot()
+    if not State.SelectedUpgradeBrainrot or State.SelectedUpgradeBrainrot == "No Brainrots Found" then
+        return nil
+    end
+
+    return State.BrainrotSlotMap[State.SelectedUpgradeBrainrot]
+end
+
+local function GetTableKeys(Table)
+    local Keys = {}
+
+    if type(Table) ~= "table" then
+        return Keys
+    end
+
+    for Key, _ in pairs(Table) do
+        table.insert(Keys, tostring(Key))
+    end
+
+    table.sort(Keys)
+    return Keys
+end
+
+local function ReadEventState()
+    local Active = {}
+    local WeatherServiceClient = Modules.WeatherServiceClient
+
+    if WeatherServiceClient then
+        if type(WeatherServiceClient.Events) == "table" then
+            local EventKeys = GetTableKeys(WeatherServiceClient.Events)
+
+            if #EventKeys > 0 then
+                table.insert(Active, "Events: " .. table.concat(EventKeys, ", "))
+            end
+        end
+
+        for _, Key in ipairs({
+            "CurrentWeather",
+            "Weather",
+            "CurrentEvent",
+            "Event",
+            "ActiveWeather",
+            "ActiveEvent",
+        }) do
+            local Value = WeatherServiceClient[Key]
+
+            if Value ~= nil then
+                table.insert(Active, Key .. ": " .. tostring(Value))
+            end
+        end
+    end
+
+    if #Active == 0 then
+        table.insert(Active, "No active weather found")
+    end
+
+    return table.concat(Active, "\n")
+end
+
+local function ReadServerLuck()
+    local ServerLuckClient = Modules.ServerLuckClient
+
+    if not ServerLuckClient then
+        return "Server luck module not loaded"
+    end
+
+    local Lines = {}
+
+    for _, Key in ipairs({
+        "Multiplier",
+        "CurrentMultiplier",
+        "Luck",
+        "ServerLuck",
+        "EndTime",
+        "TimeLeft",
+    }) do
+        local Value = ServerLuckClient[Key]
+
+        if Value ~= nil then
+            table.insert(Lines, Key .. ": " .. tostring(Value))
+        end
+    end
+
+    if #Lines == 0 then
+        return "No server luck data found"
+    end
+
+    return table.concat(Lines, "\n")
+end
+
+local function ReadTimedBoosts()
+    local TimedUpgradesServiceClient = Modules.TimedUpgradesServiceClient
+
+    if not TimedUpgradesServiceClient then
+        return "Timed upgrades module not loaded"
+    end
+
+    local Lines = {}
+
+    for _, Key in ipairs({
+        "Multipliers",
+        "EndTimes",
+        "ActiveBoosts",
+        "Boosts",
+        "Timers",
+    }) do
+        local Value = TimedUpgradesServiceClient[Key]
+
+        if type(Value) == "table" then
+            local Keys = GetTableKeys(Value)
+
+            if #Keys > 0 then
+                table.insert(Lines, Key .. ": " .. table.concat(Keys, ", "))
+            end
+        elseif Value ~= nil then
+            table.insert(Lines, Key .. ": " .. tostring(Value))
+        end
+    end
+
+    if #Lines == 0 then
+        return "No timed boost data found"
+    end
+
+    return table.concat(Lines, "\n")
+end
+
+local function RefreshEventTracker()
+    SetLabel(Labels.EventStatus, "Event State:\n" .. ReadEventState())
+    SetLabel(Labels.ServerLuck, "Server Luck:\n" .. ReadServerLuck())
+    SetLabel(Labels.TimedBoost, "Timed Boosts:\n" .. ReadTimedBoosts())
+
+    local WeatherLoaded = Modules.WeatherServiceClient and "loaded" or "missing"
+    SetLabel(Labels.WeatherStatus, "Weather Module: " .. WeatherLoaded)
+end
+
+--==================================================
+-- Farm Controller
+--==================================================
+
+local function SetFarmStatus(Text)
+    SetLabel(Labels.FarmStatus, "Farm: " .. Text)
+end
+
+local function SetFarmStep(Text)
+    SetLabel(Labels.FarmStep, "Current Step: " .. Text)
+end
+
+local function AnyFarmEnabled()
+    return State.AutoSquat
+        or State.AutoBonus
+        or State.AutoCollect
+        or State.AutoKick
+        or State.AutoPlotUpgrade
+        or State.AutoRebirth
+        or State.AutoSlotUpgrade
+end
+
+local function StartFarmController()
+    if State.FarmRunning then return end
+
+    State.FarmRunning = true
+    SetFarmStatus("running")
+
+    task.spawn(function()
+        while State.FarmRunning and not Library.Unloaded do
+            if not AnyFarmEnabled() then
+                SetFarmStatus("idle")
+                State.FarmRunning = false
+                break
+            end
+
+            if not State.FarmBusy then
+                State.FarmBusy = true
+
+                local Now = tick()
+
+                if State.AutoSquat and not State.AutoKick and not State.FarmBusy then
+									    SetFarmStep("Auto Squat")
+									
+									    KeepSquatEquipped()
+									    KeepSquatMovementUnlocked()
+									end
+
+                if State.AutoBonus and Now - State.LastBonus >= State.AutoBonusDelay then
+                    SetFarmStep("Bonus Farm")
+                    State.LastBonus = Now
+                    ClickBonusButton()
+                end
+
+                if State.AutoKick and Now - State.LastKick >= State.AutoKickDelay then
+                    SetFarmStep("Auto Kick")
+                    State.LastKick = Now
+                    RunKickCycle()
+                end
+
+                if State.AutoCollect and Now - State.LastCollect >= State.AutoCollectInterval then
+                    SetFarmStep("Auto Collect")
+                    State.LastCollect = Now
+                    CollectAllButtons()
+                end
+
+                if State.AutoPlotUpgrade and Now - State.LastPlotUpgrade >= State.PlotUpgradeDelay then
+                    SetFarmStep("Plot Upgrade")
+                    State.LastPlotUpgrade = Now
+                    FirePlotUpgrade()
+                end
+
+                if State.AutoRebirth and Now - State.LastRebirth >= State.RebirthDelay then
+                    SetFarmStep("Rebirth")
+                    State.LastRebirth = Now
+                    FireRebirth()
+                end
+
+                if State.AutoSlotUpgrade and Now - State.LastSlotUpgrade >= State.SlotUpgradeDelay then
+                    local SlotNumber = GetSelectedUpgradeSlot()
+
+                    if SlotNumber then
+                        SetFarmStep("Slot Upgrade")
+                        State.LastSlotUpgrade = Now
+                        UpgradeBrainrotSlot(SlotNumber)
+                    end
+                end
+
+                State.FarmBusy = false
+            end
+
+            task.wait(0.1)
+        end
+
+        State.FarmRunning = false
+        State.FarmBusy = false
+        SetFarmStep("none")
+    end)
+end
+
+local function StopAllFarmFeatures()
+    State.AutoSquat = false
+    State.AutoBonus = false
+    State.AutoCollect = false
+    State.AutoKick = false
+    State.AutoPlotUpgrade = false
+    State.AutoRebirth = false
+    State.AutoSlotUpgrade = false
+    State.FarmRunning = false
+    State.FarmBusy = false
+
+    UnequipTools()
+    SetFarmStatus("stopped")
+    SetFarmStep("none")
+end
+
+--==================================================
+-- Build Dashboard
+--==================================================
+
+local function BuildDashboard()
+    Groups.Dashboard.Avatar = Tabs.Dashboard:AddLeftGroupbox("Player Preview", "user-round")
+    Groups.Dashboard.Profile = Tabs.Dashboard:AddLeftGroupbox("Player Details", "id-card")
+    Groups.Dashboard.Session = Tabs.Dashboard:AddLeftGroupbox("Session Details", "monitor")
+
+    Groups.Dashboard.GameImage = Tabs.Dashboard:AddRightGroupbox("Experience Preview", "image")
+    Groups.Dashboard.Game = Tabs.Dashboard:AddRightGroupbox("Experience Details", "gamepad-2")
+    Groups.Dashboard.Overview = Tabs.Dashboard:AddRightGroupbox("Quick Overview", "panel-top")
+
+    AddPreviewImage(Groups.Dashboard.Avatar, "AvatarImage", LocalPlayer.Name .. " Avatar", GameInfo.AvatarImage)
+    AddPreviewImage(Groups.Dashboard.GameImage, "GameImage", GameInfo.Name .. " Icon", GameInfo.GameIconImage)
+
+    Groups.Dashboard.Profile:AddLabel("Account Information", true)
+    Groups.Dashboard.Profile:AddDivider()
+    Groups.Dashboard.Profile:AddLabel("Username: " .. LocalPlayer.Name)
+    Groups.Dashboard.Profile:AddLabel("Display Name: " .. LocalPlayer.DisplayName)
+    Groups.Dashboard.Profile:AddLabel("UserId: " .. tostring(LocalPlayer.UserId))
+    Groups.Dashboard.Profile:AddLabel("Access Level: " .. GetAccessLevel())
+    Groups.Dashboard.Profile:AddDivider()
+
+    Groups.Dashboard.Profile:AddButton({
+        Text = "Copy Player Info",
+        Func = function()
+            SafeClipboard(table.concat({
+                "Username: " .. LocalPlayer.Name,
+                "Display Name: " .. LocalPlayer.DisplayName,
+                "UserId: " .. tostring(LocalPlayer.UserId),
+                "Access Level: " .. GetAccessLevel(),
+                "Avatar Image: " .. GameInfo.AvatarImage,
+            }, "\n"))
+        end,
+    })
+
+    Groups.Dashboard.Profile:AddButton({
+        Text = "Print Player Info",
+        Func = function()
+            print("Username:", LocalPlayer.Name)
+            print("Display Name:", LocalPlayer.DisplayName)
+            print("UserId:", LocalPlayer.UserId)
+            print("Access Level:", GetAccessLevel())
+            print("Avatar Image:", GameInfo.AvatarImage)
+        end,
+    })
+
+    Groups.Dashboard.Game:AddLabel("Experience Information", true)
+    Groups.Dashboard.Game:AddDivider()
+    Groups.Dashboard.Game:AddLabel("Game: " .. GameInfo.Name, true)
+    Groups.Dashboard.Game:AddLabel("Creator: " .. GameInfo.CreatorName)
+    Groups.Dashboard.Game:AddLabel("Creator Type: " .. tostring(GameInfo.CreatorType))
+    Groups.Dashboard.Game:AddLabel("PlaceId: " .. tostring(game.PlaceId))
+    Groups.Dashboard.Game:AddLabel("GameId: " .. tostring(game.GameId))
+    Groups.Dashboard.Game:AddLabel("Icon AssetId: " .. tostring(GameInfo.IconAssetId))
+    Groups.Dashboard.Game:AddLabel("Created: " .. GameInfo.Created, true)
+    Groups.Dashboard.Game:AddLabel("Updated: " .. GameInfo.Updated, true)
+    Groups.Dashboard.Game:AddDivider()
+
+    Groups.Dashboard.Game:AddButton({
+        Text = "Copy Game Info",
+        Func = function()
+            SafeClipboard(table.concat({
+                "Game: " .. GameInfo.Name,
+                "Creator: " .. GameInfo.CreatorName,
+                "Creator Type: " .. tostring(GameInfo.CreatorType),
+                "PlaceId: " .. tostring(game.PlaceId),
+                "GameId: " .. tostring(game.GameId),
+                "JobId: " .. tostring(game.JobId),
+                "Icon AssetId: " .. tostring(GameInfo.IconAssetId),
+                "Game Icon Image: " .. GameInfo.GameIconImage,
+                "Created: " .. GameInfo.Created,
+                "Updated: " .. GameInfo.Updated,
+            }, "\n"))
+        end,
+    })
+
+    Groups.Dashboard.Game:AddButton({
+        Text = "Print Game Info",
+        Func = function()
+            print("Game:", GameInfo.Name)
+            print("Creator:", GameInfo.CreatorName)
+            print("Creator Type:", GameInfo.CreatorType)
+            print("PlaceId:", game.PlaceId)
+            print("GameId:", game.GameId)
+            print("JobId:", game.JobId)
+            print("Icon AssetId:", GameInfo.IconAssetId)
+            print("Game Icon Image:", GameInfo.GameIconImage)
+            print("Created:", GameInfo.Created)
+            print("Updated:", GameInfo.Updated)
+        end,
+    })
+
+    Groups.Dashboard.Session:AddLabel("Current Session", true)
+    Groups.Dashboard.Session:AddDivider()
+    Groups.Dashboard.Session:AddLabel("UI Version: " .. Config.Version)
+    Groups.Dashboard.Session:AddLabel("Executor: " .. (identifyexecutor and identifyexecutor() or "Unknown"))
+    Groups.Dashboard.Session:AddLabel("JobId: " .. tostring(game.JobId), true)
+    Groups.Dashboard.Session:AddLabel("Key Tab: " .. (IsWhitelisted() and "Visible" or "Hidden"))
+    Groups.Dashboard.Session:AddDivider()
+
+    Groups.Dashboard.Session:AddButton({
+        Text = "Copy Session Info",
+        Func = function()
+            SafeClipboard(table.concat({
+                "UI Version: " .. Config.Version,
+                "Executor: " .. (identifyexecutor and identifyexecutor() or "Unknown"),
+                "JobId: " .. tostring(game.JobId),
+                "Key Tab: " .. (IsWhitelisted() and "Visible" or "Hidden"),
+            }, "\n"))
+        end,
+    })
+
+    AddInfoBlock(Groups.Dashboard.Overview, "Interface", {
+        "Build: " .. Config.Version,
+        "Access: " .. GetAccessLevel(),
+        "Game: " .. GameInfo.Name,
+    })
+
+    AddInfoBlock(Groups.Dashboard.Overview, "Layout", {
+        "Farm tools are separated from kick controls.",
+        "Inventory and upgrade tools have their own pages.",
+        "Settings stay out of the main workflow.",
+    })
+end
+
+--==================================================
+-- Build Farm
+--==================================================
+
+local function BuildFarm()
+    Groups.Farm.Controller = Tabs.Farm:AddLeftGroupbox("Controller", "route")
+    Groups.Farm.Squat = Tabs.Farm:AddLeftGroupbox("Squat", "dumbbell")
+    Groups.Farm.Collect = Tabs.Farm:AddLeftGroupbox("Collect", "hand-coins")
+
+    Groups.Farm.Status = Tabs.Farm:AddRightGroupbox("Live Status", "activity")
+    Groups.Farm.Help = Tabs.Farm:AddRightGroupbox("Run Order", "list-ordered")
+    Groups.Farm.Notes = Tabs.Farm:AddRightGroupbox("Notes", "notebook-tabs")
+
+    Labels.FarmStatus = Groups.Farm.Status:AddLabel("Farm: idle", true)
+    Labels.FarmStep = Groups.Farm.Status:AddLabel("Current Step: none", true)
+    Labels.PlotStatus = Groups.Farm.Status:AddLabel("Detected Plot: checking...", true)
+    Labels.CollectStatus = Groups.Farm.Status:AddLabel("Last Collect: never", true)
+
+    Groups.Farm.Controller:AddLabel("Enabled features run in order and avoid overlap.", true)
+    AddSection(Groups.Farm.Controller, "Controls")
+
+    Groups.Farm.Controller:AddButton({
+        Text = "Start Enabled Farm",
+        Func = function()
+            StartFarmController()
+        end,
+    })
+
+    Groups.Farm.Controller:AddButton({
+        Text = "Stop All Features",
+        DoubleClick = true,
+        Func = function()
+            StopAllFarmFeatures()
+
+            pcall(function() Toggles.AutoSquatToggle:SetValue(false) end)
+            pcall(function() Toggles.AutoBonusFarmToggle:SetValue(false) end)
+            pcall(function() Toggles.AutoCollectToggle:SetValue(false) end)
+            pcall(function() Toggles.AutoKickToggle:SetValue(false) end)
+            pcall(function() Toggles.AutoPlotUpgradeToggle:SetValue(false) end)
+            pcall(function() Toggles.AutoRebirthToggle:SetValue(false) end)
+            pcall(function() Toggles.AutoSlotUpgradeToggle:SetValue(false) end)
+        end,
+    })
+
+    AddSection(Groups.Farm.Squat, "Weight Selection")
+
+    local WeightValues = GetSquatTools()
+		local AutoSelectedWeight = GetBestBackpackWeightName() or WeightValues[1]
+		
+		State.SelectedSquatTool = AutoSelectedWeight
+		
+		local SquatToolDropdown = Groups.Farm.Squat:AddDropdown("SquatToolDropdown", {
+		    Values = WeightValues,
+		    Default = AutoSelectedWeight,
+		    Multi = false,
+		    Text = "Squat Tool",
+		    Searchable = true,
+		    Callback = function(Value)
+		        State.SelectedSquatTool = Value
+		    end,
+		})
+		
+		pcall(function()
+		    SquatToolDropdown:SetValue(AutoSelectedWeight)
+		end)
+
+    Groups.Farm.Squat:AddButton({
+		    Text = "Use Equipped Weight",
+		    Func = function()
+		        local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+		        local Character = LocalPlayer.Character
+		
+		        local WeightNames = GetSquatTools()
+		        local FoundTool = nil
+		        local FoundName = nil
+		
+		        local function CheckContainer(Container)
+		            if not Container then return end
+		
+		            for _, WeightName in ipairs(WeightNames) do
+		                if WeightName ~= "No Tools Found" then
+		                    local Tool = Container:FindFirstChild(WeightName)
+		
+		                    if Tool and Tool:IsA("Tool") then
+		                        FoundTool = Tool
+		                        FoundName = WeightName
+		                        return
+		                    end
+		                end
+		            end
+		        end
+		
+		        CheckContainer(Backpack)
+		        CheckContainer(Character)
+		
+		        if not FoundTool or not FoundName then
+		            Library:Notify({
+		                Title = "Auto Squat",
+		                Description = "No matching backpack weight found.",
+		                Time = 3,
+		            })
+		            return
+		        end
+		
+		        State.SelectedSquatTool = FoundName
+		
+		        pcall(function()
+		            SquatToolDropdown:SetValue(FoundName)
+		        end)
+		
+		        EquipTool(FoundTool)
+		
+		        Library:Notify({
+		            Title = "Auto Squat",
+		            Description = "Selected and equipped: " .. FoundName,
+		            Time = 3,
+		        })
+		    end,
+		})
+
+    AddSection(Groups.Farm.Squat, "Automation")
+
+    Groups.Farm.Squat:AddToggle("AutoSquatToggle", {
+		    Text = "Auto Squat",
+		    Default = false,
+		    Callback = function(Value)
+		        State.AutoSquat = Value
+		
+		        if Value then
+		            local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+		            local Character = LocalPlayer.Character
+		
+		            local WeightNames = GetSquatTools()
+		            local FoundTool = nil
+		            local FoundName = nil
+		
+		            local function CheckContainer(Container)
+		                if not Container then return end
+		
+		                for _, WeightName in ipairs(WeightNames) do
+		                    if WeightName ~= "No Tools Found" then
+		                        local Tool = Container:FindFirstChild(WeightName)
+		
+		                        if Tool and Tool:IsA("Tool") then
+		                            FoundTool = Tool
+		                            FoundName = WeightName
+		                            return
+		                        end
+		                    end
+		                end
+		            end
+		
+		            CheckContainer(Backpack)
+		            CheckContainer(Character)
+		
+		            if not FoundTool or not FoundName then
+		                State.AutoSquat = false
+		                pcall(function() Toggles.AutoSquatToggle:SetValue(false) end)
+		
+		                Library:Notify({
+		                    Title = "Auto Squat",
+		                    Description = "No matching backpack weight found.",
+		                    Time = 3,
+		                })
+		
+		                return
+		            end
+		
+		            State.SelectedSquatTool = FoundName
+		
+		            pcall(function()
+		                SquatToolDropdown:SetValue(FoundName)
+		            end)
+		
+		            EquipTool(FoundTool)
+		            StartFarmController()
+								StartSquatMoveUnlocker()
+		        else
+		            UnequipTools()
+		        end
+		    end,
+		})
+
+		Groups.Farm.Squat:AddSlider("SquatMultiplierSlider", {
+		    Text = "Squat Multiplier",
+		    Default = 2,
+		    Min = 1,
+		    Max = 10,
+		    Rounding = 0,
+		    Callback = function(Value)
+		        State.SquatSpeedMultiplier = Value
+		    end,
+		})
+
+    Groups.Farm.Squat:AddToggle("AutoBonusFarmToggle", {
+        Text = "Auto Bonus Farm",
+        Default = false,
+        Callback = function(Value)
+            State.AutoBonus = Value
+            if Value then StartFarmController() end
+        end,
+    })
+
+    AddSection(Groups.Farm.Collect, "Plot Detection")
+    GetPlayerPlot()
+    Groups.Farm.Collect:AddLabel("Interval: every 5 minutes", true)
+
+    AddSection(Groups.Farm.Collect, "Collection")
+
+    Groups.Farm.Collect:AddToggle("AutoCollectToggle", {
+        Text = "Auto Collect",
+        Default = false,
+        Callback = function(Value)
+            State.AutoCollect = Value
+
+            if Value then
+                if not GetPlayerPlot() then
+                    State.AutoCollect = false
+                    pcall(function() Toggles.AutoCollectToggle:SetValue(false) end)
+                    Library:Notify({ Title = "Auto Collect", Description = "Could not detect your plot.", Time = 3 })
+                    return
+                end
+
+                State.LastCollect = 0
+                StartFarmController()
+            end
+        end,
+    })
+
+    Groups.Farm.Collect:AddButton({
+        Text = "Collect Once",
+        Func = function()
+            local Old = State.AutoCollect
+
+            State.AutoCollect = true
+            local Amount = CollectAllButtons()
+            State.AutoCollect = Old
+
+            Library:Notify({ Title = "Auto Collect", Description = "Collected " .. tostring(Amount) .. " buttons.", Time = 3 })
+        end,
+    })
+
+    Groups.Farm.Collect:AddButton({
+        Text = "Detect Plot",
+        Func = function()
+            local Plot = GetPlayerPlot()
+
+            Library:Notify({
+                Title = "Plot Detection",
+                Description = Plot and ("Detected: " .. Plot.Name) or "No plot found.",
+                Time = 3,
+            })
+        end,
+    })
+
+    AddInfoBlock(Groups.Farm.Help, "Farm Controller Order", {
+        "1. Keep squat tool equipped",
+        "2. Run bonus click",
+        "3. Process kick cycle",
+        "4. Run auto collect",
+        "5. Process upgrades and rebirth",
+    })
+
+    AddInfoBlock(Groups.Farm.Notes, "Farm Notes", {
+        "Use Start Enabled Farm after choosing toggles.",
+        "Stop All Features clears every farm toggle.",
+        "Collect uses the detected plot owner text.",
+    })
+end
+
+--==================================================
+-- Build Kick
+--==================================================
+
+local function BuildKick()
+    Groups.Kick.Control = Tabs.Kick:AddLeftGroupbox("Kick Control", "footprints")
+    Groups.Kick.Status = Tabs.Kick:AddRightGroupbox("Kick Status", "radar")
+    Groups.Kick.SettingsInfo = Tabs.Kick:AddRightGroupbox("Settings Info", "sliders-horizontal")
+
+    Labels.KickStatus = Groups.Kick.Status:AddLabel("Status: idle", true)
+
+    AddSection(Groups.Kick.Control, "Main Controls")
+
+    Groups.Kick.Control:AddToggle("AutoKickToggle", {
+        Text = "Auto Kick",
+        Default = false,
+        Callback = function(Value)
+            State.AutoKick = Value
+
+            if Value then
+                State.LastKick = 0
+                StartFarmController()
+            else
+                SetKickStatus("stopped")
+            end
+        end,
+    })
+
+    Groups.Kick.Control:AddButton({
+        Text = "Kick Once",
+        Func = function()
+            local Old = State.AutoKick
+
+            State.AutoKick = true
+            RunKickCycle()
+            State.AutoKick = Old
+        end,
+    })
+
+    AddSection(Groups.Kick.Control, "Kick Settings")
+
+    Groups.Kick.Control:AddSlider("KickPowerPercentSlider", {
+        Text = "Kick Power",
+        Default = 100,
+        Min = 1,
+        Max = 100,
+        Rounding = 0,
+        Suffix = "%",
+        Callback = function(Value)
+            SetKickPowerPercent(Value / 100)
+        end,
+    })
+
+    Groups.Kick.Control:AddButton({
+        Text = "Set Max Power",
+        Func = function()
+            SetKickPowerPercent(1)
+
+            pcall(function()
+                Options.KickPowerPercentSlider:SetValue(100)
+            end)
+
+            Library:Notify({
+                Title = "Kick Power",
+                Description = "Kick power set to MAX.",
+                Time = 3,
+            })
+        end,
+    })
+
+    Groups.Kick.Control:AddSlider("KickPostDelaySlider", {
+        Text = "Wait After Run UI",
+        Default = State.AutoKickPostDelay,
+        Min = 0,
+        Max = 6,
+        Rounding = 1,
+        Suffix = "s",
+        Callback = function(Value)
+            State.AutoKickPostDelay = Value
+        end,
+    })
+
+    Groups.Kick.Control:AddSlider("KickTimeoutSlider", {
+        Text = "Run UI Timeout",
+        Default = State.AutoKickTimeout,
+        Min = 5,
+        Max = 60,
+        Rounding = 0,
+        Suffix = "s",
+        Callback = function(Value)
+            State.AutoKickTimeout = Value
+        end,
+    })
+
+    Groups.Kick.Control:AddToggle("AutoPlaceAfterKickToggle", {
+        Text = "Auto Place Reward",
+        Default = true,
+        Callback = function(Value)
+            State.AutoPlaceAfterKick = Value
+        end,
+    })
+
+    Groups.Kick.Control:AddToggle("TeleportBeforeKickToggle", {
+        Text = "Teleport Before Kick",
+        Default = true,
+        Callback = function(Value)
+            State.TeleportBeforeKick = Value
+        end,
+    })
+
+    AddInfoBlock(Groups.Kick.Status, "Auto Kick", {
+        "Uses KickController.InMinigame when available.",
+        "Falls back to HUD.Run detection.",
+        "Sets KickServiceClient.Percent before kicking.",
+        "Walks back to KickReady before placing reward.",
+    })
+
+    AddInfoBlock(Groups.Kick.SettingsInfo, "Kick Settings", {
+        "Kick Power changes KickServiceClient.Percent.",
+        "Wait After Run UI controls the return delay.",
+        "Run UI Timeout controls how long detection waits.",
+        "Auto Place Reward uses the first empty slot.",
+    })
+end
+
+--==================================================
+-- Build Inventory / Upgrades
+--==================================================
+
+local function BuildInventory()
+    Groups.Inventory.Sell = Tabs.Inventory:AddLeftGroupbox("Selling", "badge-dollar-sign")
+    Groups.Inventory.SlotUpgrade = Tabs.Inventory:AddLeftGroupbox("Slot Upgrades", "arrow-up-wide-narrow")
+    Groups.Inventory.Info = Tabs.Inventory:AddRightGroupbox("Inventory Info", "info")
+    Groups.Inventory.Scanner = Tabs.Inventory:AddRightGroupbox("Brainrot Scanner", "scan-line")
+
+    Labels.BrainrotCount = Groups.Inventory.Scanner:AddLabel("Brainrots Found: checking...", true)
+
+    AddSection(Groups.Inventory.Sell, "Brainrot Selection")
+
+    local BrainrotDropdown = Groups.Inventory.Sell:AddDropdown("BrainrotSellDropdown", {
+        Values = GetBrainrotsOnPlot(),
+        Default = 1,
+        Multi = false,
+        Text = "Select Brainrot",
+        Searchable = true,
+        Callback = function(Value)
+            State.SelectedBrainrot = Value
+        end,
+    })
+
+    Groups.Inventory.Sell:AddButton({
+        Text = "Refresh Brainrots",
+        Func = function()
+            local Brainrots = GetBrainrotsOnPlot()
+
+            BrainrotDropdown:SetValues(Brainrots)
+            BrainrotDropdown:SetValue(Brainrots[1])
+            State.SelectedBrainrot = Brainrots[1]
+        end,
+    })
+
+    AddSection(Groups.Inventory.Sell, "Sell Actions")
+
+    Groups.Inventory.Sell:AddButton({
+        Text = "Sell Selected",
+        Func = function()
+            local _, Message = SellSelectedBrainrot()
+            Library:Notify({ Title = "Selling", Description = Message, Time = 3 })
+        end,
+    })
+
+    Groups.Inventory.Sell:AddButton({
+        Text = "Sell All Inventory",
+        Func = function()
+            local ok = SellAllInventoryBrainrots()
+            Library:Notify({
+                Title = "Selling",
+                Description = ok and "Tried selling all inventory brainrots." or "Sell all failed.",
+                Time = 3,
+            })
+        end,
+    })
+
+    AddSection(Groups.Inventory.SlotUpgrade, "Upgrade Selection")
+
+    local BrainrotUpgradeDropdown = Groups.Inventory.SlotUpgrade:AddDropdown("BrainrotUpgradeDropdown", {
+        Values = GetBrainrotsOnPlot(),
+        Default = 1,
+        Multi = false,
+        Text = "Upgrade Brainrot",
+        Searchable = true,
+        Callback = function(Value)
+            State.SelectedUpgradeBrainrot = Value
+        end,
+    })
+
+    Groups.Inventory.SlotUpgrade:AddButton({
+        Text = "Refresh Upgrade List",
+        Func = function()
+            local Brainrots = GetBrainrotsOnPlot()
+
+            BrainrotUpgradeDropdown:SetValues(Brainrots)
+            BrainrotUpgradeDropdown:SetValue(Brainrots[1])
+            State.SelectedUpgradeBrainrot = Brainrots[1]
+        end,
+    })
+
+    AddSection(Groups.Inventory.SlotUpgrade, "Upgrade Actions")
+
+    Groups.Inventory.SlotUpgrade:AddInput("SlotUpgradeAmountInput", {
+        Default = "1",
+        Numeric = true,
+        Finished = true,
+        Text = "Upgrade Amount",
+    })
+
+    Groups.Inventory.SlotUpgrade:AddButton({
+        Text = "Upgrade Selected",
+        Func = function()
+            local SlotNumber = GetSelectedUpgradeSlot()
+
+            if not SlotNumber then
+                Library:Notify({ Title = "Slot Upgrades", Description = "Pick a valid brainrot first.", Time = 3 })
+                return
+            end
+
+            local Amount = tonumber(Options.SlotUpgradeAmountInput.Value) or 1
+            Amount = math.clamp(Amount, 1, 500)
+
+            for _ = 1, Amount do
+                UpgradeBrainrotSlot(SlotNumber)
+                task.wait(State.SlotUpgradeDelay)
+            end
+
+            Library:Notify({
+                Title = "Slot Upgrades",
+                Description = "Sent " .. tostring(Amount) .. " upgrade request(s).",
+                Time = 3,
+            })
+        end,
+    })
+
+    Groups.Inventory.SlotUpgrade:AddToggle("AutoSlotUpgradeToggle", {
+        Text = "Auto Upgrade Selected",
+        Default = false,
+        Callback = function(Value)
+            State.AutoSlotUpgrade = Value
+            if Value then StartFarmController() end
+        end,
+    })
+
+    Groups.Inventory.SlotUpgrade:AddButton({
+        Text = "Max Upgrade Selected",
+        Func = function()
+            local SlotNumber = GetSelectedUpgradeSlot()
+
+            if not SlotNumber then
+                Library:Notify({ Title = "Slot Upgrades", Description = "Pick a valid brainrot first.", Time = 3 })
+                return
+            end
+
+            task.spawn(function()
+                for _ = 1, 250 do
+                    UpgradeBrainrotSlot(SlotNumber)
+                    task.wait(State.SlotUpgradeDelay)
+                end
+
+                Library:Notify({
+                    Title = "Slot Upgrades",
+                    Description = "Finished max upgrade attempt.",
+                    Time = 3,
+                })
+            end)
+        end,
+    })
+
+    AddInfoBlock(Groups.Inventory.Info, "Inventory Layout", {
+        "Selling tools are grouped in the left column.",
+        "Slot upgrades are separated from sell actions.",
+        "Refresh lists before using selected actions.",
+    })
+
+    AddInfoBlock(Groups.Inventory.Scanner, "Scanner", {
+        "Reads brainrots from your detected plot slots.",
+        "Sorts entries by slot number.",
+        "Mutation names are pulled from MutationVFX.",
+    })
+end
+
+local function BuildUpgrades()
+    Groups.Upgrades.Plot = Tabs.Upgrades:AddLeftGroupbox("Plot Upgrade", "arrow-up-circle")
+    Groups.Upgrades.Rebirth = Tabs.Upgrades:AddLeftGroupbox("Rebirth", "refresh-cw")
+    Groups.Upgrades.Info = Tabs.Upgrades:AddRightGroupbox("Upgrade Info", "circle-help")
+
+    AddSection(Groups.Upgrades.Plot, "Plot Upgrade")
+
+    Groups.Upgrades.Plot:AddToggle("AutoPlotUpgradeToggle", {
+        Text = "Auto Plot Upgrade",
+        Default = false,
+        Callback = function(Value)
+            State.AutoPlotUpgrade = Value
+            if Value then StartFarmController() end
+        end,
+    })
+
+    Groups.Upgrades.Plot:AddSlider("PlotUpgradeDelaySlider", {
+        Text = "Plot Upgrade Delay",
+        Default = State.PlotUpgradeDelay,
+        Min = 1,
+        Max = 30,
+        Rounding = 0,
+        Suffix = "s",
+        Callback = function(Value)
+            State.PlotUpgradeDelay = Value
+        end,
+    })
+
+    Groups.Upgrades.Plot:AddButton({
+        Text = "Upgrade Plot Once",
+        Func = function()
+            FirePlotUpgrade()
+        end,
+    })
+
+    AddSection(Groups.Upgrades.Rebirth, "Rebirth Controls")
+
+    Groups.Upgrades.Rebirth:AddToggle("AutoRebirthToggle", {
+        Text = "Auto Rebirth",
+        Default = false,
+        Callback = function(Value)
+            State.AutoRebirth = Value
+            if Value then StartFarmController() end
+        end,
+    })
+
+    Groups.Upgrades.Rebirth:AddSlider("RebirthDelaySlider", {
+        Text = "Rebirth Delay",
+        Default = State.RebirthDelay,
+        Min = 1,
+        Max = 60,
+        Rounding = 0,
+        Suffix = "s",
+        Callback = function(Value)
+            State.RebirthDelay = Value
+        end,
+    })
+
+    Groups.Upgrades.Rebirth:AddButton({
+        Text = "Rebirth Once",
+        Func = function()
+            FireRebirth()
+        end,
+    })
+
+    AddInfoBlock(Groups.Upgrades.Info, "Upgrades", {
+        "Plot upgrade and rebirth controls are separated.",
+        "Delay sliders control repeat timing.",
+        "Use one-time buttons for quick tests.",
+    })
+end
+
+--==================================================
+-- Build Shop / Events
+--==================================================
+
+local function BuildShop()
+    Groups.Shop.Weights = Tabs.Shop:AddLeftGroupbox("Weights", "dumbbell")
+    Groups.Shop.Speed = Tabs.Shop:AddLeftGroupbox("Speed Upgrades", "zap")
+    Groups.Shop.Info = Tabs.Shop:AddRightGroupbox("Shop Info", "info")
+    Groups.Shop.Status = Tabs.Shop:AddRightGroupbox("Shop Status", "badge-check")
+
+    State.Shop = State.Shop or {
+        SelectedWeight = nil,
+        SelectedSpeedLevel = 1,
+        LastFailedNotification = 0,
+        FailedNotificationCooldown = 2,
+    }
+
+    local function NotifyPurchaseFailed()
+        local CurrentTime = tick()
+
+        if CurrentTime - State.Shop.LastFailedNotification >= State.Shop.FailedNotificationCooldown then
+            State.Shop.LastFailedNotification = CurrentTime
+
+            Library:Notify({
+                Title = "Purchase Failed",
+                Description = "You do not have enough money for this upgrade.",
+                Time = 3,
+            })
+        end
+    end
+
+    local function GetWeightContainer()
+        local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if not PlayerGui then return nil end
+
+        local Frames = PlayerGui:FindFirstChild("Frames")
+        if not Frames then return nil end
+
+        local WeightUI = Frames:FindFirstChild("WeightUI")
+        if not WeightUI then return nil end
+
+        return WeightUI:FindFirstChild("ScrollingFrame")
+    end
+
+    local function GetWeightNames()
+        local Weights = {}
+        local Container = GetWeightContainer()
+
+        if Container then
+            for _, Item in ipairs(Container:GetChildren()) do
+                local Button = Item:FindFirstChild("InteractButton", true)
+
+                if Button and Button:IsA("ImageButton") then
+                    table.insert(Weights, Item.Name)
+                end
+            end
+        end
+
+        table.sort(Weights)
+
+        if #Weights == 0 then
+            table.insert(Weights, "No Weights Found")
+        end
+
+        return Weights
+    end
+
+    local function BuySelectedWeight()
+        if not State.Shop.SelectedWeight or State.Shop.SelectedWeight == "No Weights Found" then
+            Library:Notify({
+                Title = "No Weight Selected",
+                Description = "Pick a valid weight first.",
+                Time = 3,
+            })
+
+            return
+        end
+
+        FireRemote("Shop_Buy", "WeightShop", State.Shop.SelectedWeight)
+
+        Library:Notify({
+            Title = "Weight Shop",
+            Description = "Tried buying: " .. State.Shop.SelectedWeight,
+            Time = 3,
+        })
+    end
+
+    AddSection(Groups.Shop.Weights, "Weight Shop")
+
+    local WeightDropdown = Groups.Shop.Weights:AddDropdown("WeightShopDropdown", {
+        Values = GetWeightNames(),
+        Default = 1,
+        Multi = false,
+        Text = "Select Weight",
+        Searchable = true,
+        Callback = function(Value)
+            State.Shop.SelectedWeight = Value
+        end,
+    })
+
+    Groups.Shop.Weights:AddButton({
+        Text = "Refresh Weights",
+        Func = function()
+            local Weights = GetWeightNames()
+
+            WeightDropdown:SetValues(Weights)
+            WeightDropdown:SetValue(Weights[1])
+            State.Shop.SelectedWeight = Weights[1]
+
+            Library:Notify({
+                Title = "Weights Refreshed",
+                Description = "Weight shop list has been updated.",
+                Time = 3,
+            })
+        end,
+    })
+
+    Groups.Shop.Weights:AddButton({
+        Text = "Buy Selected Weight",
+        Func = BuySelectedWeight,
+    })
+
+    local function BuySpeedUpgrade(Level)
+        local Leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+        local Coins = Leaderstats and Leaderstats:FindFirstChild("Coins")
+        local BeforeCoins = Coins and Coins.Value or 0
+
+        FireRemote("SPEED_UPGRADE", Level)
+        task.wait(0.25)
+
+        local AfterCoins = Coins and Coins.Value or 0
+
+        if Coins and AfterCoins >= BeforeCoins then
+            NotifyPurchaseFailed()
+            return false
+        end
+
+        return true
+    end
+
+    AddSection(Groups.Shop.Speed, "Speed Shop")
+
+    Groups.Shop.Speed:AddDropdown("SpeedUpgradeDropdown", {
+        Values = {
+            "1", "2", "3", "4", "5",
+            "6", "7", "8", "9", "10",
+        },
+        Default = 1,
+        Multi = false,
+        Text = "Speed Upgrade Level",
+        Callback = function(Value)
+            State.Shop.SelectedSpeedLevel = tonumber(Value) or 1
+        end,
+    })
+
+    Groups.Shop.Speed:AddButton({
+        Text = "Buy Speed Upgrade",
+        Func = function()
+            local Success = BuySpeedUpgrade(State.Shop.SelectedSpeedLevel)
+
+            if Success then
+                Library:Notify({
+                    Title = "Speed Upgrade",
+                    Description = "Purchased speed level " .. tostring(State.Shop.SelectedSpeedLevel),
+                    Time = 2,
+                })
+            end
+        end,
+    })
+
+    AddSection(Groups.Shop.Speed, "Bulk Actions")
+
+    Groups.Shop.Speed:AddButton({
+        Text = "Buy Max Speed Upgrade",
+        Func = function()
+            local BoughtAmount = 0
+            local FailedAmount = 0
+
+            for i = 1, 10 do
+                local Success = BuySpeedUpgrade(i)
+
+                if Success then
+                    BoughtAmount += 1
+                else
+                    FailedAmount += 1
+                end
+
+                task.wait(0.15)
+            end
+
+            Library:Notify({
+                Title = "Speed Upgrade",
+                Description = "Finished. Bought: " .. tostring(BoughtAmount) .. " | Failed: " .. tostring(FailedAmount),
+                Time = 3,
+            })
+        end,
+    })
+
+    AddInfoBlock(Groups.Shop.Info, "Weights", {
+        "Open the weight shop in-game first.",
+        "Refresh, select a weight, then buy.",
+    })
+
+    AddInfoBlock(Groups.Shop.Info, "Speed Upgrades", {
+        "Select a level or buy max upgrades.",
+    })
+
+    AddInfoBlock(Groups.Shop.Status, "Current Selection", {
+        "Selected weight updates from the dropdown.",
+        "Selected speed level updates from the dropdown.",
+        "Open shop UI before refreshing weights.",
+    })
+
+    PH.Functions.GetWeightNames = GetWeightNames
+    PH.Functions.BuySelectedWeight = BuySelectedWeight
+    PH.Functions.BuySpeedUpgrade = BuySpeedUpgrade
+end
+
+local function BuildEvents()
+    Groups.Events.Tracker = Tabs.Events:AddLeftGroupbox("Event Tracker", "cloud-sun")
+    Groups.Events.Info = Tabs.Events:AddRightGroupbox("Event Info", "info")
+
+    Labels.EventStatus = Groups.Events.Tracker:AddLabel("Event State: checking...", true)
+    Labels.WeatherStatus = Groups.Events.Tracker:AddLabel("Weather Module: checking...", true)
+
+    Groups.Events.Tracker:AddDivider()
+
+    Groups.Events.Tracker:AddButton({
+        Text = "Refresh Events",
+        Func = function()
+            RefreshEventTracker()
+
+            Library:Notify({
+                Title = "Events",
+                Description = "Event tracker refreshed.",
+                Time = 3,
+            })
+        end,
+    })
+
+    Groups.Events.Tracker:AddToggle("AutoRefreshEventsToggle", {
+        Text = "Auto Refresh Events",
+        Default = false,
+        Callback = function(Value)
+            if Value then
+                task.spawn(function()
+                    while Toggles.AutoRefreshEventsToggle and Toggles.AutoRefreshEventsToggle.Value and not Library.Unloaded do
+                        RefreshEventTracker()
+                        task.wait(5)
+                    end
+                end)
+            end
+        end,
+    })
+
+    Labels.ServerLuck = Groups.Events.Info:AddLabel("Server Luck: checking...", true)
+    Labels.TimedBoost = Groups.Events.Info:AddLabel("Timed Boosts: checking...", true)
+
+    Groups.Events.Info:AddDivider()
+    Groups.Events.Info:AddLabel("Tracks weather, server luck, and timed boosts.", true)
+    Groups.Events.Info:AddLabel("Refreshes safely without firing any remotes.", true)
+
+    RefreshEventTracker()
+end
+
+local function BuildWebhooks()
+    Groups.Webhooks.Main = Tabs.Webhooks:AddLeftGroupbox("Webhook Sender", "webhook")
+    Groups.Webhooks.Scanner = Tabs.Webhooks:AddRightGroupbox("Entity Scanner", "scan-line")
+    Groups.Webhooks.Info = Tabs.Webhooks:AddRightGroupbox("Info", "info")
+
+    Groups.Webhooks.Main:AddInput("WebhookURLInput", {
+        Default = "",
+        Numeric = false,
+        Finished = true,
+        Text = "Discord Webhook URL",
+        Placeholder = "https://discord.com/api/webhooks/...",
+        Callback = function(Value)
+            State.WebhookURL = Value
+        end,
+    })
+
+    AddSection(Groups.Webhooks.Main, "Brainrot Sender")
+
+    local EntityDropdown = Groups.Webhooks.Main:AddDropdown("WebhookBrainrotDropdown", {
+        Values = GetEntityNames(),
+        Default = 1,
+        Multi = false,
+        Text = "Brainrot",
+        Searchable = true,
+        Callback = function(Value)
+            State.SelectedWebhookBrainrot = Value
+        end,
+    })
+
+    Groups.Webhooks.Main:AddButton({
+        Text = "Refresh Brainrots",
+        Func = function()
+            local Names = GetEntityNames()
+            EntityDropdown:SetValues(Names)
+            EntityDropdown:SetValue(Names[1])
+            State.SelectedWebhookBrainrot = Names[1]
+
+            Library:Notify({
+                Title = "Webhooks",
+                Description = "Brainrot list refreshed.",
+                Time = 3,
+            })
+        end,
+    })
+
+    Groups.Webhooks.Main:AddButton({
+        Text = "Send Selected Brainrot",
+        Func = function()
+            if not State.SelectedWebhookBrainrot or State.SelectedWebhookBrainrot == "No Entities Found" then
+                Library:Notify({
+                    Title = "Webhook",
+                    Description = "Select a valid brainrot first.",
+                    Time = 3,
+                })
+                return
+            end
+
+            local Sent = SendBrainrotWebhook(
+                State.SelectedWebhookBrainrot,
+                "Manual webhook test from Polluted Hub."
+            )
+
+            Library:Notify({
+                Title = "Webhook",
+                Description = Sent and "Webhook sent." or "Webhook failed.",
+                Time = 3,
+            })
+        end,
+    })
+
+		Groups.Webhooks.Scanner:AddButton({
+		    Text = "Preview Selected Model",
+		    Func = function()
+		        if not State.SelectedWebhookBrainrot or State.SelectedWebhookBrainrot == "No Entities Found" then
+		            Library:Notify({
+		                Title = "Preview",
+		                Description = "Select a brainrot first.",
+		                Time = 3,
+		            })
+		            return
+		        end
+		
+		        CreateEntityPreviewGui(State.SelectedWebhookBrainrot)
+		    end,
+		})
+
+    AddSection(Groups.Webhooks.Scanner, "Auto Detection")
+
+    Groups.Webhooks.Scanner:AddToggle("AutoWebhookBrainrotsToggle", {
+        Text = "Auto Webhook Found Brainrots",
+        Default = false,
+        Callback = function(Value)
+            State.AutoWebhookBrainrots = Value
+
+            if Value then
+								SaveCurrentBackpackBrainrots()
+                task.spawn(function()
+                    while State.AutoWebhookBrainrots and SCRIPT_CACHE.Alive and not Library.Unloaded do
+                        SendNewBackpackBrainrots()
+												task.wait(1)
+                    end
+                end)
+            end
+        end,
+    })
+
+    Groups.Webhooks.Scanner:AddSlider("WebhookCooldownSlider", {
+        Text = "Send Cooldown",
+        Default = State.WebhookCooldown,
+        Min = 5,
+        Max = 120,
+        Rounding = 0,
+        Suffix = "s",
+        Callback = function(Value)
+            State.WebhookCooldown = Value
+        end,
+    })
+
+    AddInfoBlock(Groups.Webhooks.Info, "How It Works", {
+        "Reads brainrot names from ReplicatedStorage.Objects.Entities.",
+        "Uses plot scanner results to detect found brainrots.",
+        "Sends selected or detected brainrots to Discord.",
+        "Images are pulled from decals, textures, or image objects when found.",
+    })
+end
+
+--==================================================
+-- Access Tabs
+--==================================================
+
+local DevUnlocked = false
+local TesterUnlocked = false
+
+local function LoadTestingTab()
+    if TesterUnlocked then
+        Library:Notify({
+            Title = "Already Unlocked",
+            Description = "Testing tab is already loaded.",
+            Time = 4,
+        })
+
+        return
+    end
+
+    TesterUnlocked = true
+
+    Tabs.Testing = Window:AddTab("Testing", "flask-conical")
+
+    local TestingLeft = Tabs.Testing:AddLeftGroupbox("Testing", "test-tube")
+    TestingLeft:AddLabel("Testing tab unlocked.", true)
+
+    TestingLeft:AddButton({
+        Text = "Print Tester Info",
+        Func = function()
+            print("Tester Username:", LocalPlayer.Name)
+            print("Tester Display Name:", LocalPlayer.DisplayName)
+            print("Tester UserId:", LocalPlayer.UserId)
+        end,
+    })
+
+    local TestingRight = Tabs.Testing:AddRightGroupbox("Tester Tools", "wrench")
+    TestingRight:AddLabel("Add tester-only features here.", true)
+
+    PH.Tabs = Tabs
+end
+
+local function LoadDevTab()
+    if DevUnlocked then
+        Library:Notify({
+            Title = "Already Unlocked",
+            Description = "Developer tab is already loaded.",
+            Time = 4,
+        })
+
+        return
+    end
+
+    DevUnlocked = true
+
+    Tabs.Dev = Window:AddTab("Dev", "code")
+
+    local DevLeft = Tabs.Dev:AddLeftGroupbox("Developer", "terminal")
+    DevLeft:AddLabel("Developer tab unlocked.", true)
+
+    DevLeft:AddButton({
+        Text = "Print Dev Info",
+        Func = function()
+            print("Dev Username:", LocalPlayer.Name)
+            print("Dev Display Name:", LocalPlayer.DisplayName)
+            print("Dev UserId:", LocalPlayer.UserId)
+        end,
+    })
+
+    local DevRight = Tabs.Dev:AddRightGroupbox("Debug", "bug")
+    DevRight:AddLabel("Add dev-only tools here.", true)
+
+    PH.Tabs = Tabs
+end
+
+local function BuildKeyTab()
+    if not Tabs.Key then
+        return
+    end
+
+    Tabs.Key:AddLabel({
+        Text = "Developer and tester access only.",
+        DoesWrap = true,
+        Size = 16,
+    })
+
+    Tabs.Key:AddKeyBox(function(ReceivedKey)
+        if ReceivedKey == Config.DevKey then
+            if not IsDevUser() then
+                Library:Notify({
+                    Title = "Access Denied",
+                    Description = "Your UserId is not whitelisted for developer access.",
+                    Time = 5,
+                })
+
+                return
+            end
+
+            LoadDevTab()
+            LoadTestingTab()
+
+            Library:Notify({
+                Title = "Dev Access Granted",
+                Description = "Developer and testing tabs have been loaded.",
+                Time = 5,
+            })
+
+            return
+        end
+
+        if ReceivedKey == Config.TesterKey then
+            if not IsTesterUser() then
+                Library:Notify({
+                    Title = "Access Denied",
+                    Description = "Your UserId is not whitelisted for tester access.",
+                    Time = 5,
+                })
+
+                return
+            end
+
+            LoadTestingTab()
+
+            Library:Notify({
+                Title = "Tester Access Granted",
+                Description = "Testing tab has been loaded.",
+                Time = 5,
+            })
+
+            return
+        end
+
+        Library:Notify({
+            Title = "Invalid Key",
+            Description = "The key you entered is incorrect.",
+            Time = 5,
+        })
+    end)
+end
+
+--==================================================
+-- Build Settings
+--==================================================
+
+local function BuildSettings()
+    Groups.Settings.Window = Tabs.Settings:AddLeftGroupbox("Window", "panel-top")
+    Groups.Settings.Performance = Tabs.Settings:AddRightGroupbox("Performance", "activity")
+    Groups.Settings.Notifications = Tabs.Settings:AddRightGroupbox("Notifications", "bell")
+    Groups.Settings.Config = Tabs.Settings:AddRightGroupbox("Config", "folder-cog")
+
+    local VisibilityToggle = Groups.Settings.Window:AddToggle("ToggleUIVisibility", {
+        Text = "ui visible",
+        Default = true,
+        Callback = function(Value)
+            pcall(function()
+                Library:Toggle(Value)
+            end)
+        end,
+    })
+
+    VisibilityToggle:AddKeyPicker("UIBind", {
+        Default = "RightAlt",
+        Text = "ui bind",
+        Mode = "Toggle",
+        SyncToggleState = true,
+        NoUI = true,
+    })
+
+    Library.ToggleKeybind = Options.UIBind
+
+    Groups.Settings.Window:AddDropdown("UIScaleDropdown", {
+        Values = {
+            "50%",
+            "75%",
+            "90%",
+            "100%",
+            "110%",
+            "125%",
+            "150%",
+            "175%",
+            "200%",
+        },
+        Default = 4,
+        Multi = false,
+        Text = "ui scale",
+        Callback = function(Value)
+            local NumericValue = tonumber(Value:match("%d+"))
+
+            if NumericValue then
+                Library:SetDPIScale(NumericValue)
+            end
+        end,
+    })
+
+    Groups.Settings.Window:AddDropdown("NotificationSideDropdown", {
+        Values = { "Left", "Right" },
+        Default = "Right",
+        Multi = false,
+        Text = "notification side",
+        Callback = function(Value)
+            Library:SetNotifySide(Value)
+        end,
+    })
+
+    Groups.Settings.Window:AddSlider("UICornerRadius", {
+        Text = "corner radius",
+        Default = Library.CornerRadius or 8,
+        Min = 0,
+        Max = 20,
+        Rounding = 0,
+        Callback = function(Value)
+            Window:SetCornerRadius(Value)
+        end,
+    })
+
+    Groups.Settings.Window:AddToggle("CustomCursorToggle", {
+        Text = "custom cursor",
+        Default = true,
+        Callback = function(Value)
+            Library.ShowCustomCursor = Value
+        end,
+    })
+
+    Groups.Settings.Window:AddDivider()
+
+    Groups.Settings.Window:AddButton({
+        Text = "unload",
+        DoubleClick = true,
+        Func = function()
+            PH.Cleanup()
+        end,
+    })
+
+    State.Watermark = State.Watermark or {
+        Enabled = true,
+        Label = nil,
+        Name = "Kick A Lucky Block",
+        Timer = tick(),
+        Frames = 0,
+        FPS = 60,
+        Ping = 0,
+    }
+
+    local Watermark = State.Watermark
+
+    local function NewWatermark()
+        local ok, label = pcall(function()
+            return Library:AddDraggableLabel(Watermark.Name .. " | ... fps | ... ms")
+        end)
+
+        if not ok or not label then
+            ok, label = pcall(function()
+                return Library:AddDraggableLabel({
+                    Text = Watermark.Name .. " | ... fps | ... ms",
+                })
+            end)
+        end
+
+        Watermark.Label = ok and label or nil
+    end
+
+    local function SetWatermarkText(Text)
+        if not Watermark.Label then return end
+
+        if Watermark.Label.SetText then
+            pcall(function()
+                Watermark.Label:SetText(Text)
+            end)
+        elseif Watermark.Label.Set then
+            pcall(function()
+                Watermark.Label:Set(Text)
+            end)
+        elseif Watermark.Label.Text ~= nil then
+            pcall(function()
+                Watermark.Label.Text = Text
+            end)
+        end
+    end
+
+    local function SetWatermarkVisible(Value)
+        if not Watermark.Label then return end
+
+        if Watermark.Label.SetVisible then
+            pcall(function()
+                Watermark.Label:SetVisible(Value)
+            end)
+        elseif Watermark.Label.SetVisibility then
+            pcall(function()
+                Watermark.Label:SetVisibility(Value)
+            end)
+        elseif Watermark.Label.Visible ~= nil then
+            pcall(function()
+                Watermark.Label.Visible = Value
+            end)
+        end
+    end
+
+    NewWatermark()
+
+    TrackConnection(RunService.RenderStepped:Connect(function()
+        if not PH.Alive then return end
+
+        Watermark.Frames += 1
+
+        if tick() - Watermark.Timer >= 1 then
+            Watermark.FPS = Watermark.Frames
+            Watermark.Frames = 0
+            Watermark.Timer = tick()
+
+            pcall(function()
+                Watermark.Ping = math.floor(
+                    Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+                )
+            end)
+
+            SetWatermarkText(
+                Watermark.Name
+                    .. " | "
+                    .. tostring(Watermark.FPS)
+                    .. " fps | "
+                    .. tostring(Watermark.Ping)
+                    .. " ms"
+            )
+        end
+
+        SetWatermarkVisible(Watermark.Enabled)
+    end))
+
+    Groups.Settings.Performance:AddToggle("WatermarkToggle", {
+        Text = "watermark",
+        Default = true,
+        Callback = function(Value)
+            Watermark.Enabled = Value
+            SetWatermarkVisible(Value)
+        end,
+    })
+
+    Groups.Settings.Performance:AddLabel("Live Stats", true)
+    Groups.Settings.Performance:AddDivider()
+
+    Groups.Settings.Performance:AddButton({
+        Text = "print fps / ping",
+        Func = function()
+            print("FPS:", Watermark.FPS)
+            print("Ping:", Watermark.Ping .. "ms")
+        end,
+    })
+
+    Groups.Settings.Performance:AddButton({
+        Text = "copy session stats",
+        Func = function()
+            SafeClipboard(table.concat({
+                "Game: " .. GameInfo.Name,
+                "Username: " .. LocalPlayer.Name,
+                "FPS: " .. tostring(Watermark.FPS),
+                "Ping: " .. tostring(Watermark.Ping) .. "ms",
+                "JobId: " .. tostring(game.JobId),
+            }, "\n"))
+        end,
+    })
+
+    local LoadedNotification
+
+    Groups.Settings.Notifications:AddButton({
+        Text = "test notification",
+        Func = function()
+            Library:Notify({
+                Title = "Notification",
+                Description = "This is a test notification.",
+                Time = 3,
+            })
+        end,
+    })
+
+    Groups.Settings.Notifications:AddButton({
+        Text = "show loaded message",
+        Func = function()
+            LoadedNotification = Library:Notify({
+                Title = "<font color='rgb(0,255,0)'>loaded</font>",
+                Description = "<font color='rgb(0,255,0)'>right alt to toggle the ui.</font>",
+                Time = 5,
+            })
+        end,
+    })
+
+    LoadedNotification = Library:Notify({
+        Title = "<font color='rgb(0,255,0)'>loaded</font>",
+        Description = "<font color='rgb(0,255,0)'>right alt to toggle the ui.</font>",
+        Time = 5,
+    })
+
+    task.spawn(function()
+        local Colors = {
+            "rgb(0,255,0)",
+            "rgb(255,165,0)",
+        }
+
+        local Index = 1
+
+        while PH.Alive and task.wait(0.5) do
+            if LoadedNotification and LoadedNotification.ChangeDescription then
+                pcall(function()
+                    LoadedNotification:ChangeDescription(
+                        "<font color='" .. Colors[Index] .. "'>right alt to toggle the ui.</font>"
+                    )
+                end)
+            end
+
+            Index = Index % #Colors + 1
+        end
+    end)
+
+    Groups.Settings.Config:AddLabel("Folders", true)
+    Groups.Settings.Config:AddDivider()
+    Groups.Settings.Config:AddLabel("Theme: KickALuckyBlock")
+    Groups.Settings.Config:AddLabel("Configs: KickALuckyBlockConfigs")
+    Groups.Settings.Config:AddDivider()
+    Groups.Settings.Config:AddLabel("UIBind and visibility are ignored by config saves.", true)
+end
+
+--==================================================
+-- Cleanup
+--==================================================
+
+function PH.Cleanup()
+    PH.Alive = false
+
+    pcall(function()
+        StopAllFarmFeatures()
+    end)
+
+    for _, Connection in ipairs(PH.Connections) do
+        pcall(function()
+            Connection:Disconnect()
+        end)
+    end
+
+    pcall(function()
+        Library:Unload()
+    end)
+end
+
+--==================================================
+-- Export Shared Functions
+--==================================================
+
+PH.Functions.SafeClipboard = SafeClipboard
+PH.Functions.SetLabel = SetLabel
+PH.Functions.FireRemote = FireRemote
+PH.Functions.InvokeRemote = InvokeRemote
+
+PH.Functions.GetCharacter = GetCharacter
+PH.Functions.GetHumanoid = GetHumanoid
+PH.Functions.GetRoot = GetRoot
+PH.Functions.GetEquippedTool = GetEquippedTool
+PH.Functions.GetPlayerPlot = GetPlayerPlot
+PH.Functions.GetPlayerSlotsFolder = GetPlayerSlotsFolder
+PH.Functions.GetAvailableSlot = GetAvailableSlot
+
+PH.Functions.GetSquatTools = GetSquatTools
+PH.Functions.EquipTool = EquipTool
+PH.Functions.UnequipTools = UnequipTools
+PH.Functions.KeepSquatEquipped = KeepSquatEquipped
+PH.Functions.CollectAllButtons = CollectAllButtons
+PH.Functions.GetBrainrotsOnPlot = GetBrainrotsOnPlot
+PH.Functions.SellSelectedBrainrot = SellSelectedBrainrot
+PH.Functions.SellAllInventoryBrainrots = SellAllInventoryBrainrots
+
+PH.Functions.SetKickPowerPercent = SetKickPowerPercent
+PH.Functions.RunKickCycle = RunKickCycle
+PH.Functions.TeleportToKickReady = TeleportToKickReady
+PH.Functions.MoveBackTo = MoveBackTo
+PH.Functions.PlaceOrStoreBrainrot = PlaceOrStoreBrainrot
+
+PH.Functions.FirePlotUpgrade = FirePlotUpgrade
+PH.Functions.FireRebirth = FireRebirth
+PH.Functions.UpgradeBrainrotSlot = UpgradeBrainrotSlot
+PH.Functions.RefreshEventTracker = RefreshEventTracker
+PH.Functions.ReadEventState = ReadEventState
+PH.Functions.ReadServerLuck = ReadServerLuck
+PH.Functions.ReadTimedBoosts = ReadTimedBoosts
+
+PH.Functions.StartFarmController = StartFarmController
+PH.Functions.StopAllFarmFeatures = StopAllFarmFeatures
+PH.Functions.AnyFarmEnabled = AnyFarmEnabled
+
+--==================================================
+-- Build UI
+--==================================================
+
+BuildDashboard()
+BuildFarm()
+BuildKick()
+BuildInventory()
+BuildUpgrades()
+BuildShop()
+BuildEvents()
+BuildWebhooks()
+BuildKeyTab()
+BuildSettings()
+
+-- refresh exported references after UI build
+PH.Config = Config
+PH.State = State
+PH.Labels = Labels
+PH.Groups = Groups
+PH.Modules = Modules
+PH.Tabs = Tabs
+PH.Window = Window
+PH.Library = Library
+PH.Options = Options
+PH.Toggles = Toggles
+
+--==================================================
+-- Managers
+--==================================================
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+
+ThemeManager:SetFolder("KickALuckyBlock")
+SaveManager:SetFolder("KickALuckyBlockConfigs")
+
+SaveManager:IgnoreThemeSettings()
+
+SaveManager:SetIgnoreIndexes({
+    "UIBind",
+    "ToggleUIVisibility",
+})
+
+ThemeManager:ApplyToTab(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+SaveManager:LoadAutoloadConfig()
