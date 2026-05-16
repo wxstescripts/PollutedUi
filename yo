@@ -1203,7 +1203,7 @@ local function GetRoot()
     return Character and Character:FindFirstChild("HumanoidRootPart")
 end
 
-local function KeepSquatMovementUnlocked()
+local function KeepSquatMovementUnlocked(AllowTeleport)
     local Character = LocalPlayer.Character
     if not Character then return end
 
@@ -1217,6 +1217,10 @@ local function KeepSquatMovementUnlocked()
     if Humanoid then
         Humanoid.PlatformStand = false
         Humanoid.AutoRotate = true
+    end
+
+    if AllowTeleport == false then
+        return
     end
 
     local Spawn = workspace:FindFirstChild("SpawnLocation")
@@ -2332,7 +2336,6 @@ local function StartFarmController()
             while State.AutoBonus and State.FarmRunning and PH.Alive and not Library.Unloaded do
                 if CheckFeatureRuntime("Bonus") then
                     pcall(function()
-                        SetFarmStep("Bonus Farm")
                         ClickBonusButton()
                     end)
                 end
@@ -2354,18 +2357,22 @@ local function StartFarmController()
 
             local Now = tick()
 
-            --// squat runs light and does not use FarmBusy
+            --// squat stays equipped during collect, but does NOT teleport to spawn during collect/kick
             if CheckFeatureRuntime("Squat")
                 and State.AutoSquat
-                and not State.AutoKick
                 and Now - (State.LastSquatCheck or 0) >= State.AutoSquatDelay
             then
-                SetFarmStep("Auto Squat")
                 State.LastSquatCheck = Now
 
                 pcall(function()
                     KeepSquatEquipped()
-                    KeepSquatMovementUnlocked()
+
+                    local ShouldTeleportToSpawn =
+                        not State.FarmBusy
+                        and not State.AutoCollect
+                        and not State.AutoKick
+
+                    KeepSquatMovementUnlocked(ShouldTeleportToSpawn)
                 end)
             end
 
@@ -2387,7 +2394,23 @@ local function StartFarmController()
                 then
                     SetFarmStep("Auto Collect")
                     State.LastCollect = Now
+
+                    --// keep squat equipped while collecting, but don't force spawn teleport
+                    pcall(function()
+                        if State.AutoSquat then
+                            KeepSquatEquipped()
+                            KeepSquatMovementUnlocked(false)
+                        end
+                    end)
+
                     CollectAllButtons()
+
+                    pcall(function()
+                        if State.AutoSquat then
+                            KeepSquatEquipped()
+                            KeepSquatMovementUnlocked(false)
+                        end
+                    end)
                 end
 
                 if CheckFeatureRuntime("PlotUpgrade")
