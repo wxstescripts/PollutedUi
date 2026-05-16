@@ -5118,27 +5118,18 @@ local function BuildKeyTab()
         })
     end
 
-    Tabs.Key:AddLabel({
-        Text = "Access System",
-        DoesWrap = true,
-        Size = 18,
-    })
+    local AccessInfo = Tabs.Key:AddLeftGroupbox("Access System", "shield-check")
 
-    Tabs.Key:AddLabel({
-        Text = "Submit key only checks access. It does not unlock tabs yet.\nAfter the check, open Access Review and press Grant Checked Access.",
-        DoesWrap = true,
-        Size = 14,
-    })
-
-    Tabs.Key:AddLabel({
-        Text = "User: " .. LocalPlayer.Name
-            .. "\nUserId: " .. tostring(LocalPlayer.UserId)
-            .. "\nDetected: " .. GetAccessLevel()
-            .. "\nDev Whitelist: " .. tostring(IsDevUser())
-            .. "\nTester Whitelist: " .. tostring(IsTesterUser()),
-        DoesWrap = true,
-        Size = 14,
-    })
+		AccessInfo:AddLabel("Submit key only checks access.", true)
+		AccessInfo:AddLabel("Grant button unlocks tabs after validation.", true)
+		
+		AccessInfo:AddDivider()
+		
+		AccessInfo:AddLabel("User: " .. LocalPlayer.Name, true)
+		AccessInfo:AddLabel("UserId: " .. tostring(LocalPlayer.UserId), true)
+		AccessInfo:AddLabel("Detected: " .. GetAccessLevel(), true)
+		AccessInfo:AddLabel("Dev Whitelist: " .. tostring(IsDevUser()), true)
+		AccessInfo:AddLabel("Tester Whitelist: " .. tostring(IsTesterUser()), true)
 
     Tabs.Key:AddKeyBox(function(ReceivedKey)
         BuildAccessReviewTab()
@@ -5210,7 +5201,7 @@ local function BuildSettings()
     Groups.Settings.Config = Tabs.Settings:AddRightGroupbox("Config", "folder-cog")
 
     local function RunDiscordInvite()
-        local InviteCode = "CjgZmnrhpk"
+        local InviteCode = "polluted"
         local InviteLink = "https://discord.gg/" .. InviteCode
         local Request = request or http_request or (syn and syn.request)
 
