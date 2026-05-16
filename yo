@@ -144,6 +144,9 @@ local State = {
 
     FarmRunning = false,
     FarmBusy = false,
+    CollectingNow = false,
+    KickingNow = false,
+    SquatUnlockLoopRunning = false,
 
     --//==================================================
     --// Squat
@@ -1210,16 +1213,21 @@ local function KeepSquatMovementUnlocked(AllowTeleport)
     local Root = Character:FindFirstChild("HumanoidRootPart") or Character.PrimaryPart
     local Humanoid = Character:FindFirstChildOfClass("Humanoid")
 
+    -- Always unlock movement first.
     if Root and Root.Anchored then
         Root.Anchored = false
     end
 
     if Humanoid then
         Humanoid.PlatformStand = false
+        Humanoid.Sit = false
         Humanoid.AutoRotate = true
     end
 
-    if AllowTeleport == false then
+    -- Teleport is now opt-in only.
+    -- false/nil = unlock movement only
+    -- true = unlock movement + return to spawn
+    if AllowTeleport ~= true then
         return
     end
 
@@ -1231,11 +1239,20 @@ local function KeepSquatMovementUnlocked(AllowTeleport)
 end
 
 local function StartSquatMoveUnlocker()
+    if State.SquatUnlockLoopRunning then
+        return
+    end
+
+    State.SquatUnlockLoopRunning = true
+
     task.spawn(function()
         while State.AutoSquat and not Library.Unloaded and PH.Alive do
-            KeepSquatMovementUnlocked()
+            -- Do not teleport here. This loop only keeps movement unlocked.
+            KeepSquatMovementUnlocked(false)
             task.wait()
         end
+
+        State.SquatUnlockLoopRunning = false
     end)
 end
 
@@ -1488,9 +1505,55 @@ local function ClickBonusButton()
 
     local Pressed = false
 
+    local function IsVisibleChain(Object)
+        local Current = Object
+
+        while Current and Current ~= PlayerGui do
+            if Current:IsA("GuiObject") and Current.Visible == false then
+                return false
+            end
+
+            if Current:IsA("ScreenGui") and Current.Enabled == false then
+                return false
+            end
+
+            Current = Current.Parent
+        end
+
+        return true
+    end
+
+    local function Press(Button)
+        if not Button or not Button:IsA("GuiButton") then
+            return
+        end
+
+        if not IsVisibleChain(Button) then
+            return
+        end
+
+        Pressed = true
+
+        pcall(function() firesignal(Button.MouseButton1Down) end)
+        pcall(function() firesignal(Button.MouseButton1Click) end)
+        pcall(function() firesignal(Button.MouseButton1Up) end)
+        pcall(function() firesignal(Button.Activated) end)
+        pcall(function() Button:Activate() end)
+    end
+
+    local KickUpgrades = PlayerGui:FindFirstChild("KickUpgrades", true)
+
+    if KickUpgrades then
+        for _, Object in ipairs(KickUpgrades:GetDescendants()) do
+            if Object:IsA("GuiButton") then
+                Press(Object)
+            end
+        end
+    end
+
     for _, Object in ipairs(PlayerGui:GetDescendants()) do
-        if Object:IsA("TextButton") or Object:IsA("ImageButton") then
-            local Name = string.lower(Object.Name)
+        if Object:IsA("GuiButton") then
+            local Name = string.lower(Object.Name or "")
             local Text = ""
 
             pcall(function()
@@ -1501,30 +1564,38 @@ local function ClickBonusButton()
             or Name:find("reward")
             or Name:find("claim")
             or Name:find("spin")
-            or Text:find("claim")
             or Text:find("bonus")
-            or Text:find("reward") then
-
-                if Object.Visible then
-                    Pressed = true
-
-                    pcall(function()
-                        firesignal(Object.MouseButton1Click)
-                    end)
-
-                    pcall(function()
-                        firesignal(Object.Activated)
-                    end)
-
-                    pcall(function()
-                        Object:Activate()
-                    end)
-                end
+            or Text:find("reward")
+            or Text:find("claim")
+            or Text:find("spin") then
+                Press(Object)
             end
         end
     end
 
     return Pressed
+end
+
+local function StartBonusCollector()
+    if State.BonusLoopRunning then
+        return
+    end
+
+    State.BonusLoopRunning = true
+
+    task.spawn(function()
+        while PH.Alive and not Library.Unloaded do
+            if State.AutoSquat then
+                pcall(function()
+                    ClickBonusButton()
+                end)
+            end
+
+            task.wait(State.AutoBonusDelay or 0.05)
+        end
+
+        State.BonusLoopRunning = false
+    end)
 end
 
 local function GetButtonsFolder()
@@ -2228,6 +2299,26 @@ local function EnsureFeatureRuntimeTables()
     }
 
     State.FeatureStartedAt = State.FeatureStartedAt or {}
+
+    State.FarmOrder = State.FarmOrder or {
+        "Squat",
+        "Kick",
+        "Collect",
+        "PlotUpgrade",
+        "SlotUpgrade",
+        "Webhook",
+        "Rebirth",
+    }
+
+    for Index = #State.FarmOrder, 1, -1 do
+        if State.FarmOrder[Index] == "Bonus" then
+            table.remove(State.FarmOrder, Index)
+        end
+    end
+
+    State.FarmOrderIndex = State.FarmOrderIndex or 1
+    State.CurrentOrderedFeature = State.CurrentOrderedFeature or nil
+    State.CurrentOrderedFeatureStartedAt = State.CurrentOrderedFeatureStartedAt or 0
 end
 
 local function SetFeatureRunMinutes(FeatureName, Value)
@@ -2238,6 +2329,51 @@ local function SetFeatureRunMinutes(FeatureName, Value)
 
     State.FeatureRunMinutes[FeatureName] = Minutes
 end
+
+local FarmFeatureList = {
+    "Squat",
+    "Kick",
+    "Collect",
+    "PlotUpgrade",
+    "SlotUpgrade",
+    "Webhook",
+    "Rebirth",
+}
+
+local FarmFeatureDisplay = {
+    Squat = "Squat",
+    Bonus = "Bonus",
+    Kick = "Kick",
+    Collect = "Collect",
+    PlotUpgrade = "Plot Upgrade",
+    SlotUpgrade = "Slot Upgrade",
+    Webhook = "Webhook",
+    Rebirth = "Rebirth",
+}
+
+local function SetFarmOrderSlot(SlotIndex, FeatureName)
+    EnsureFeatureRuntimeTables()
+
+    if not FeatureName or FeatureName == "" then
+        return
+    end
+
+    State.FarmOrder[SlotIndex] = FeatureName
+    State.FarmOrderIndex = math.clamp(State.FarmOrderIndex or 1, 1, #State.FarmOrder)
+end
+
+local function GetFarmOrderText()
+    EnsureFeatureRuntimeTables()
+
+    local Lines = {}
+
+    for Index, FeatureName in ipairs(State.FarmOrder) do
+        table.insert(Lines, tostring(Index) .. ". " .. tostring(FarmFeatureDisplay[FeatureName] or FeatureName))
+    end
+
+    return table.concat(Lines, "\n")
+end
+
 
 local function SyncFeatureToggle(FeatureName, Value)
     local ToggleIds = FeatureToggleIds[FeatureName]
@@ -2318,33 +2454,221 @@ local function StartFeatureRuntimeTimers()
 end
 
 
+local function GetFeatureStateKey(FeatureName)
+    return FeatureTimerMap[FeatureName]
+end
+
+local function IsFeatureEnabledForOrder(FeatureName)
+    if FeatureName == "Bonus" then
+        return false
+    end
+
+    local StateKey = GetFeatureStateKey(FeatureName)
+    return StateKey and State[StateKey] == true
+end
+
+local function AdvanceFarmOrder()
+    EnsureFeatureRuntimeTables()
+
+    State.FarmOrderIndex += 1
+
+    if State.FarmOrderIndex > #State.FarmOrder then
+        State.FarmOrderIndex = 1
+    end
+
+    State.CurrentOrderedFeature = nil
+    State.CurrentOrderedFeatureStartedAt = 0
+end
+
+local function GetNextOrderedFeature()
+    EnsureFeatureRuntimeTables()
+
+    if #State.FarmOrder == 0 then
+        return nil
+    end
+
+    for _ = 1, #State.FarmOrder do
+        local FeatureName = State.FarmOrder[State.FarmOrderIndex]
+
+        if FeatureName and IsFeatureEnabledForOrder(FeatureName) and CheckFeatureRuntime(FeatureName) then
+            return FeatureName
+        end
+
+        AdvanceFarmOrder()
+    end
+
+    return nil
+end
+
+local function GetOrderedFeatureMinutes(FeatureName)
+    EnsureFeatureRuntimeTables()
+
+    return tonumber(State.FeatureRunMinutes[FeatureName]) or 0
+end
+
+local function ShouldStayOnOrderedFeature(FeatureName)
+    local Minutes = GetOrderedFeatureMinutes(FeatureName)
+
+    if Minutes <= 0 then
+        return false
+    end
+
+    if State.CurrentOrderedFeature ~= FeatureName then
+        State.CurrentOrderedFeature = FeatureName
+        State.CurrentOrderedFeatureStartedAt = tick()
+        return true
+    end
+
+    return tick() - (State.CurrentOrderedFeatureStartedAt or 0) < Minutes * 60
+end
+
+local function RunOrderedFarmFeature(FeatureName)
+    local Now = tick()
+
+    if FeatureName == "Squat" then
+        SetFarmStep("Auto Squat")
+
+        pcall(function()
+            KeepSquatEquipped()
+            KeepSquatMovementUnlocked(true)
+        end)
+
+        task.wait(math.max(State.AutoSquatDelay or 0.18, 0.15))
+        return true
+    end
+
+    if FeatureName == "Bonus" then
+        SetFarmStep("Bonus Farm")
+
+        pcall(function()
+            ClickBonusButton()
+        end)
+
+        task.wait(State.AutoBonusDelay or 0.05)
+        return true
+    end
+
+    if FeatureName == "Kick" then
+        if Now - (State.LastKick or 0) < State.AutoKickDelay then
+            task.wait(0.1)
+            return true
+        end
+
+        SetFarmStep("Auto Kick")
+        State.LastKick = Now
+        State.KickingNow = true
+        State.CollectingNow = false
+
+        pcall(function()
+            RunKickCycle()
+        end)
+
+        State.KickingNow = false
+        return true
+    end
+
+    if FeatureName == "Collect" then
+        if Now - (State.LastCollect or 0) < State.AutoCollectInterval then
+            task.wait(0.1)
+            return true
+        end
+
+        SetFarmStep("Auto Collect")
+        State.LastCollect = Now
+        State.CollectingNow = true
+        State.KickingNow = false
+
+        pcall(function()
+            if State.AutoSquat then
+                KeepSquatEquipped()
+                KeepSquatMovementUnlocked(false)
+            end
+        end)
+
+        pcall(function()
+            CollectAllButtons()
+        end)
+
+        pcall(function()
+            if State.AutoSquat then
+                KeepSquatEquipped()
+                KeepSquatMovementUnlocked(false)
+            end
+        end)
+
+        State.CollectingNow = false
+        return true
+    end
+
+    if FeatureName == "PlotUpgrade" then
+        if Now - (State.LastPlotUpgrade or 0) >= State.PlotUpgradeDelay then
+            SetFarmStep("Plot Upgrade")
+            State.LastPlotUpgrade = Now
+            FirePlotUpgrade()
+        end
+
+        return true
+    end
+
+    if FeatureName == "Rebirth" then
+        if Now - (State.LastRebirth or 0) >= State.RebirthDelay then
+            SetFarmStep("Rebirth")
+            State.LastRebirth = Now
+            FireRebirth()
+        end
+
+        return true
+    end
+
+    if FeatureName == "SlotUpgrade" then
+        if Now - (State.LastSlotUpgrade or 0) >= State.SlotUpgradeDelay then
+            local SlotNumber = GetSelectedUpgradeSlot()
+
+            if SlotNumber then
+                SetFarmStep("Slot Upgrade")
+                State.LastSlotUpgrade = Now
+                UpgradeBrainrotSlot(SlotNumber)
+            end
+        end
+
+        return true
+    end
+
+    if FeatureName == "Webhook" then
+        SetFarmStep("Webhook Rewards")
+        SendNewBackpackBrainrots()
+        task.wait(0.5)
+        return true
+    end
+
+    return false
+end
+
 local function StartFarmController()
     if State.FarmRunning then
         StartFeatureRuntimeTimers()
+
+        if State.AutoSquat then
+            StartSquatMoveUnlocker()
+        end
+
         return
     end
 
+    EnsureFeatureRuntimeTables()
+
     State.FarmRunning = true
+    State.FarmBusy = false
+    State.KickingNow = false
+    State.CollectingNow = false
+    State.FarmOrderIndex = State.FarmOrderIndex or 1
+
     StartFeatureRuntimeTimers()
     SetFarmStatus("running")
 
-    --// bonus runs outside FarmBusy so kick/collect never block it
-    if State.AutoBonus and not State.BonusLoopRunning then
-        State.BonusLoopRunning = true
-
-        task.spawn(function()
-            while State.AutoBonus and State.FarmRunning and PH.Alive and not Library.Unloaded do
-                if CheckFeatureRuntime("Bonus") then
-                    pcall(function()
-                        ClickBonusButton()
-                    end)
-                end
-
-                task.wait(State.AutoBonusDelay or 0.05)
-            end
-
-            State.BonusLoopRunning = false
-        end)
+    if State.AutoSquat then
+        StartSquatMoveUnlocker()
+        StartBonusCollector()
     end
 
     task.spawn(function()
@@ -2355,100 +2679,36 @@ local function StartFarmController()
                 break
             end
 
-            local Now = tick()
-
-            --// squat stays equipped during collect, but does NOT teleport to spawn during collect/kick
-            if CheckFeatureRuntime("Squat")
-                and State.AutoSquat
-                and Now - (State.LastSquatCheck or 0) >= State.AutoSquatDelay
-            then
-                State.LastSquatCheck = Now
-
-                pcall(function()
-                    KeepSquatEquipped()
-
-                    local ShouldTeleportToSpawn =
-                        not State.FarmBusy
-                        and not State.AutoCollect
-                        and not State.AutoKick
-
-                    KeepSquatMovementUnlocked(ShouldTeleportToSpawn)
-                end)
+            if State.FarmBusy then
+                task.wait(0.1)
+                continue
             end
 
-            if not State.FarmBusy then
-                State.FarmBusy = true
+            local FeatureName = GetNextOrderedFeature()
 
-                if CheckFeatureRuntime("Kick")
-                    and State.AutoKick
-                    and Now - State.LastKick >= State.AutoKickDelay
-                then
-                    SetFarmStep("Auto Kick")
-                    State.LastKick = Now
-                    RunKickCycle()
-                end
+            if not FeatureName then
+                task.wait(0.15)
+                continue
+            end
 
-                if CheckFeatureRuntime("Collect")
-                    and State.AutoCollect
-                    and Now - State.LastCollect >= State.AutoCollectInterval
-                then
-                    SetFarmStep("Auto Collect")
-                    State.LastCollect = Now
+            State.FarmBusy = true
 
-                    --// keep squat equipped while collecting, but don't force spawn teleport
-                    pcall(function()
-                        if State.AutoSquat then
-                            KeepSquatEquipped()
-                            KeepSquatMovementUnlocked(false)
-                        end
-                    end)
+            local Ran = pcall(function()
+                RunOrderedFarmFeature(FeatureName)
+            end)
 
-                    CollectAllButtons()
+            State.FarmBusy = false
 
-                    pcall(function()
-                        if State.AutoSquat then
-                            KeepSquatEquipped()
-                            KeepSquatMovementUnlocked(false)
-                        end
-                    end)
-                end
+            if not Ran then
+                Library:Notify({
+                    Title = "Farm",
+                    Description = "Feature failed: " .. tostring(FeatureName),
+                    Time = 3,
+                })
+            end
 
-                if CheckFeatureRuntime("PlotUpgrade")
-                    and State.AutoPlotUpgrade
-                    and Now - State.LastPlotUpgrade >= State.PlotUpgradeDelay
-                then
-                    SetFarmStep("Plot Upgrade")
-                    State.LastPlotUpgrade = Now
-                    FirePlotUpgrade()
-                end
-
-                if CheckFeatureRuntime("Rebirth")
-                    and State.AutoRebirth
-                    and Now - State.LastRebirth >= State.RebirthDelay
-                then
-                    SetFarmStep("Rebirth")
-                    State.LastRebirth = Now
-                    FireRebirth()
-                end
-
-                if CheckFeatureRuntime("SlotUpgrade")
-                    and State.AutoSlotUpgrade
-                    and Now - State.LastSlotUpgrade >= State.SlotUpgradeDelay
-                then
-                    local SlotNumber = GetSelectedUpgradeSlot()
-
-                    if SlotNumber then
-                        SetFarmStep("Slot Upgrade")
-                        State.LastSlotUpgrade = Now
-                        UpgradeBrainrotSlot(SlotNumber)
-                    end
-                end
-
-                if CheckFeatureRuntime("Webhook") and State.AutoWebhookBrainrots then
-                    SendNewBackpackBrainrots()
-                end
-
-                State.FarmBusy = false
+            if not ShouldStayOnOrderedFeature(FeatureName) then
+                AdvanceFarmOrder()
             end
 
             task.wait(0.1)
@@ -2457,6 +2717,9 @@ local function StartFarmController()
         State.FarmRunning = false
         State.FarmBusy = false
         State.BonusLoopRunning = false
+        State.CollectingNow = false
+        State.KickingNow = false
+        State.CurrentOrderedFeature = nil
         SetFarmStep("none")
     end)
 end
@@ -2610,24 +2873,61 @@ end
 --==================================================
 
 local function BuildFarm()
-    Groups.Farm.Controller = Tabs.Farm:AddLeftGroupbox("Controller", "route")
-    Groups.Farm.Squat = Tabs.Farm:AddLeftGroupbox("Squat", "dumbbell")
-    Groups.Farm.Collect = Tabs.Farm:AddLeftGroupbox("Collect", "hand-coins")
+    EnsureFeatureRuntimeTables()
+
+    Groups.Farm.Controller = Tabs.Farm:AddLeftGroupbox("Farm Control", "route")
+    Groups.Farm.Pages = Tabs.Farm:AddLeftGroupbox("Feature Pages", "panel-top")
+    Groups.Farm.Order = Tabs.Farm:AddLeftGroupbox("Order Builder", "list-ordered")
 
     Groups.Farm.Status = Tabs.Farm:AddRightGroupbox("Live Status", "activity")
-    Groups.Farm.Help = Tabs.Farm:AddRightGroupbox("Run Order", "list-ordered")
-    Groups.Farm.Notes = Tabs.Farm:AddRightGroupbox("Notes", "notebook-tabs")
+    Groups.Farm.Squat = Tabs.Farm:AddRightGroupbox("Squat Page", "dumbbell")
+    Groups.Farm.KickPage = Tabs.Farm:AddRightGroupbox("Kick Page", "footprints")
+    Groups.Farm.Collect = Tabs.Farm:AddRightGroupbox("Collect Page", "hand-coins")
+    Groups.Farm.UpgradePage = Tabs.Farm:AddRightGroupbox("Upgrade Page", "trending-up")
+    Groups.Farm.RuntimePage = Tabs.Farm:AddRightGroupbox("Runtime Page", "clock")
+    Groups.Farm.Help = Tabs.Farm:AddRightGroupbox("Farm Notes", "notebook-tabs")
 
     Labels.FarmStatus = Groups.Farm.Status:AddLabel("Farm: idle", true)
     Labels.FarmStep = Groups.Farm.Status:AddLabel("Current Step: none", true)
     Labels.PlotStatus = Groups.Farm.Status:AddLabel("Detected Plot: checking...", true)
     Labels.CollectStatus = Groups.Farm.Status:AddLabel("Last Collect: never", true)
 
-    Groups.Farm.Controller:AddLabel("Enabled features run in order and avoid overlap.", true)
-    AddSection(Groups.Farm.Controller, "Controls")
+    local PageGroups = {
+        Status = Groups.Farm.Status,
+        Squat = Groups.Farm.Squat,
+        Kick = Groups.Farm.KickPage,
+        Collect = Groups.Farm.Collect,
+        Upgrades = Groups.Farm.UpgradePage,
+        Runtime = Groups.Farm.RuntimePage,
+        Notes = Groups.Farm.Help,
+    }
+
+    local function SetGroupVisible(Group, Value)
+        if not Group then return end
+
+        pcall(function()
+            if Group.SetVisible then
+                Group:SetVisible(Value)
+            elseif Group.SetVisibility then
+                Group:SetVisibility(Value)
+            elseif Group.Visible ~= nil then
+                Group.Visible = Value
+            end
+        end)
+    end
+
+    local function SwitchFarmPage(PageName)
+        for Name, Group in pairs(PageGroups) do
+            SetGroupVisible(Group, Name == PageName or Name == "Status")
+        end
+
+        SetFarmStep("Viewing: " .. tostring(PageName))
+    end
+
+    AddSection(Groups.Farm.Controller, "Main Controls")
 
     Groups.Farm.Controller:AddButton({
-        Text = "Start Enabled Farm",
+        Text = "Start Ordered Farm",
         Func = function()
             StartFarmController()
         end,
@@ -2649,158 +2949,280 @@ local function BuildFarm()
         end,
     })
 
-    AddSection(Groups.Farm.Squat, "Weight Selection")
+    Groups.Farm.Controller:AddButton({
+        Text = "Detect Plot",
+        Func = function()
+            local Plot = GetPlayerPlot()
 
-    local WeightValues = GetSquatTools()
-		local AutoSelectedWeight = GetBestBackpackWeightName() or WeightValues[1]
-		
-		State.SelectedSquatTool = AutoSelectedWeight
-		
-		local SquatToolDropdown = Groups.Farm.Squat:AddDropdown("SquatToolDropdown", {
-		    Values = WeightValues,
-		    Default = AutoSelectedWeight,
-		    Multi = false,
-		    Text = "Squat Tool",
-		    Searchable = true,
-		    Callback = function(Value)
-		        State.SelectedSquatTool = Value
-		    end,
-		})
-		
-		pcall(function()
-		    SquatToolDropdown:SetValue(AutoSelectedWeight)
-		end)
-
-    Groups.Farm.Squat:AddButton({
-		    Text = "Use Equipped Weight",
-		    Func = function()
-		        local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-		        local Character = LocalPlayer.Character
-		
-		        local WeightNames = GetSquatTools()
-		        local FoundTool = nil
-		        local FoundName = nil
-		
-		        local function CheckContainer(Container)
-		            if not Container then return end
-		
-		            for _, WeightName in ipairs(WeightNames) do
-		                if WeightName ~= "No Tools Found" then
-		                    local Tool = Container:FindFirstChild(WeightName)
-		
-		                    if Tool and Tool:IsA("Tool") then
-		                        FoundTool = Tool
-		                        FoundName = WeightName
-		                        return
-		                    end
-		                end
-		            end
-		        end
-		
-		        CheckContainer(Backpack)
-		        CheckContainer(Character)
-		
-		        if not FoundTool or not FoundName then
-		            Library:Notify({
-		                Title = "Auto Squat",
-		                Description = "No matching backpack weight found.",
-		                Time = 3,
-		            })
-		            return
-		        end
-		
-		        State.SelectedSquatTool = FoundName
-		
-		        pcall(function()
-		            SquatToolDropdown:SetValue(FoundName)
-		        end)
-		
-		        EquipTool(FoundTool)
-		
-		        Library:Notify({
-		            Title = "Auto Squat",
-		            Description = "Selected and equipped: " .. FoundName,
-		            Time = 3,
-		        })
-		    end,
-		})
-
-    AddSection(Groups.Farm.Squat, "Automation")
-
-    Groups.Farm.Squat:AddToggle("AutoSquatToggle", {
-		    Text = "Auto Squat",
-		    Default = false,
-		    Callback = function(Value)
-		        State.AutoSquat = Value
-		
-		        if Value then
-		            local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-		            local Character = LocalPlayer.Character
-		
-		            local WeightNames = GetSquatTools()
-		            local FoundTool = nil
-		            local FoundName = nil
-		
-		            local function CheckContainer(Container)
-		                if not Container then return end
-		
-		                for _, WeightName in ipairs(WeightNames) do
-		                    if WeightName ~= "No Tools Found" then
-		                        local Tool = Container:FindFirstChild(WeightName)
-		
-		                        if Tool and Tool:IsA("Tool") then
-		                            FoundTool = Tool
-		                            FoundName = WeightName
-		                            return
-		                        end
-		                    end
-		                end
-		            end
-		
-		            CheckContainer(Backpack)
-		            CheckContainer(Character)
-		
-		            if not FoundTool or not FoundName then
-		                State.AutoSquat = false
-		                pcall(function() Toggles.AutoSquatToggle:SetValue(false) end)
-		
-		                Library:Notify({
-		                    Title = "Auto Squat",
-		                    Description = "No matching backpack weight found.",
-		                    Time = 3,
-		                })
-		
-		                return
-		            end
-		
-		            State.SelectedSquatTool = FoundName
-		
-		            pcall(function()
-		                SquatToolDropdown:SetValue(FoundName)
-		            end)
-		
-		            EquipTool(FoundTool)
-		            StartFarmController()
-								StartSquatMoveUnlocker()
-		        else
-		            UnequipTools()
-		        end
-		    end,
-		})
-Groups.Farm.Squat:AddToggle("AutoBonusFarmToggle", {
-        Text = "Auto Bonus Farm",
-        Default = false,
-        Callback = function(Value)
-            State.AutoBonus = Value
-            if Value then StartFarmController() end
+            Library:Notify({
+                Title = "Plot Detection",
+                Description = Plot and ("Detected: " .. Plot.Name) or "No plot found.",
+                Time = 3,
+            })
         end,
     })
 
-    AddSection(Groups.Farm.Collect, "Plot Detection")
-    GetPlayerPlot()
-    Groups.Farm.Collect:AddLabel("Interval: every 5 minutes", true)
+    AddSection(Groups.Farm.Pages, "Open Feature Page")
+
+    Groups.Farm.Pages:AddButton({ Text = "Status", Func = function() SwitchFarmPage("Status") end })
+    Groups.Farm.Pages:AddButton({ Text = "Squat", Func = function() SwitchFarmPage("Squat") end })
+    Groups.Farm.Pages:AddButton({ Text = "Kick", Func = function() SwitchFarmPage("Kick") end })
+    Groups.Farm.Pages:AddButton({ Text = "Collect", Func = function() SwitchFarmPage("Collect") end })
+    Groups.Farm.Pages:AddButton({ Text = "Upgrades", Func = function() SwitchFarmPage("Upgrades") end })
+    Groups.Farm.Pages:AddButton({ Text = "Runtime", Func = function() SwitchFarmPage("Runtime") end })
+    Groups.Farm.Pages:AddButton({ Text = "Notes", Func = function() SwitchFarmPage("Notes") end })
+
+    AddSection(Groups.Farm.Pages, "Step Pages")
+
+    for SlotIndex = 1, 7 do
+        Groups.Farm.Pages:AddButton({
+            Text = "Open Step " .. tostring(SlotIndex),
+            Func = function()
+                local FeatureName = State.FarmOrder and State.FarmOrder[SlotIndex]
+
+                if FeatureName == "Squat" then
+                    SwitchFarmPage("Squat")
+                elseif FeatureName == "Kick" then
+                    SwitchFarmPage("Kick")
+                elseif FeatureName == "Collect" then
+                    SwitchFarmPage("Collect")
+                elseif FeatureName == "PlotUpgrade" or FeatureName == "SlotUpgrade" or FeatureName == "Rebirth" then
+                    SwitchFarmPage("Upgrades")
+                elseif FeatureName == "Webhook" then
+                    SwitchFarmPage("Runtime")
+                else
+                    SwitchFarmPage("Status")
+                end
+            end,
+        })
+    end
+
+    AddSection(Groups.Farm.Order, "Farm Order")
+
+    local PublicOrderPreview = Groups.Farm.Order:AddLabel("Order:\n" .. GetFarmOrderText(), true)
+
+    local function RefreshPublicOrder()
+        SetLabel(PublicOrderPreview, "Order:\n" .. GetFarmOrderText())
+    end
+
+    for SlotIndex = 1, 7 do
+        Groups.Farm.Order:AddDropdown("FarmOrderSlot" .. tostring(SlotIndex), {
+            Values = FarmFeatureList,
+            Default = State.FarmOrder and State.FarmOrder[SlotIndex] or FarmFeatureList[SlotIndex],
+            Multi = false,
+            Text = "Step " .. tostring(SlotIndex),
+            Callback = function(Value)
+                SetFarmOrderSlot(SlotIndex, Value)
+                RefreshPublicOrder()
+            end,
+        })
+    end
+
+    Groups.Farm.Order:AddButton({
+        Text = "Reset Order",
+        DoubleClick = true,
+        Func = function()
+            State.FarmOrder = {
+                "Squat",
+                "Kick",
+                "Collect",
+                "PlotUpgrade",
+                "SlotUpgrade",
+                "Webhook",
+                "Rebirth",
+            }
+
+            State.FarmOrderIndex = 1
+            State.CurrentOrderedFeature = nil
+            State.CurrentOrderedFeatureStartedAt = 0
+            RefreshPublicOrder()
+
+            for Index, FeatureName in ipairs(State.FarmOrder) do
+                pcall(function()
+                    Options["FarmOrderSlot" .. tostring(Index)]:SetValue(FeatureName)
+                end)
+            end
+        end,
+    })
+
+    AddSection(Groups.Farm.Squat, "Weight Selection")
+
+    local WeightValues = GetSquatTools()
+    local AutoSelectedWeight = GetBestBackpackWeightName() or WeightValues[1]
+
+    State.SelectedSquatTool = AutoSelectedWeight
+
+    local SquatToolDropdown = Groups.Farm.Squat:AddDropdown("SquatToolDropdown", {
+        Values = WeightValues,
+        Default = AutoSelectedWeight,
+        Multi = false,
+        Text = "Squat Tool",
+        Searchable = true,
+        Callback = function(Value)
+            State.SelectedSquatTool = Value
+        end,
+    })
+
+    pcall(function()
+        SquatToolDropdown:SetValue(AutoSelectedWeight)
+    end)
+
+    Groups.Farm.Squat:AddButton({
+        Text = "Use Backpack Weight",
+        Func = function()
+            local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+            local Character = LocalPlayer.Character
+            local WeightNames = GetSquatTools()
+            local FoundTool = nil
+            local FoundName = nil
+
+            local function CheckContainer(Container)
+                if not Container then return end
+
+                for _, WeightName in ipairs(WeightNames) do
+                    if WeightName ~= "No Tools Found" and WeightName ~= "No Weights Found" then
+                        local Tool = Container:FindFirstChild(WeightName)
+
+                        if Tool and Tool:IsA("Tool") then
+                            FoundTool = Tool
+                            FoundName = WeightName
+                            return
+                        end
+                    end
+                end
+            end
+
+            CheckContainer(Backpack)
+            CheckContainer(Character)
+
+            if not FoundTool or not FoundName then
+                Library:Notify({
+                    Title = "Auto Squat",
+                    Description = "No matching backpack weight found.",
+                    Time = 3,
+                })
+                return
+            end
+
+            State.SelectedSquatTool = FoundName
+
+            pcall(function()
+                SquatToolDropdown:SetValue(FoundName)
+            end)
+
+            EquipTool(FoundTool)
+
+            Library:Notify({
+                Title = "Auto Squat",
+                Description = "Selected and equipped: " .. FoundName,
+                Time = 3,
+            })
+        end,
+    })
+
+    AddSection(Groups.Farm.Squat, "Squat Controls")
+
+    Groups.Farm.Squat:AddToggle("AutoSquatToggle", {
+        Text = "Auto Squat",
+        Default = false,
+        Callback = function(Value)
+            State.AutoSquat = Value
+
+            if Value then
+                local BestWeight = GetBestBackpackWeightName()
+
+                if BestWeight then
+                    State.SelectedSquatTool = BestWeight
+
+                    pcall(function()
+                        SquatToolDropdown:SetValue(BestWeight)
+                    end)
+
+                    local Tool = FindToolByName(BestWeight)
+
+                    if Tool then
+                        EquipTool(Tool)
+                    end
+                end
+
+                StartFarmController()
+                StartSquatMoveUnlocker()
+                StartBonusCollector()
+            else
+                UnequipTools()
+            end
+        end,
+    })
+
+    Groups.Farm.Squat:AddLabel("Bonus buttons are collected in the background while Auto Squat is on.", true)
+
+    Groups.Farm.Squat:AddToggle("AutoBonusFarmToggle", {
+        Text = "Bonus Collector",
+        Default = true,
+        Callback = function(Value)
+            State.AutoBonus = Value
+
+            if Value then
+                StartBonusCollector()
+            end
+        end,
+    })
+
+    AddSection(Groups.Farm.KickPage, "Kick Controls")
+
+    Groups.Farm.KickPage:AddToggle("AutoKickToggle", {
+        Text = "Auto Kick",
+        Default = false,
+        Callback = function(Value)
+            State.AutoKick = Value
+
+            if Value then
+                State.LastKick = 0
+                StartFarmController()
+            else
+                SetKickStatus("stopped")
+            end
+        end,
+    })
+
+    Groups.Farm.KickPage:AddButton({
+        Text = "Kick Once",
+        Func = function()
+            local Old = State.AutoKick
+
+            State.AutoKick = true
+            RunKickCycle()
+            State.AutoKick = Old
+        end,
+    })
+
+    Groups.Farm.KickPage:AddSlider("FarmKickDelaySlider", {
+        Text = "Kick Delay",
+        Default = State.AutoKickDelay,
+        Min = 0.25,
+        Max = 10,
+        Rounding = 2,
+        Suffix = "s",
+        Callback = function(Value)
+            State.AutoKickDelay = Value
+        end,
+    })
+
+    Groups.Farm.KickPage:AddSlider("FarmKickPostDelaySlider", {
+        Text = "Return Delay",
+        Default = State.AutoKickPostDelay,
+        Min = 0,
+        Max = 6,
+        Rounding = 2,
+        Suffix = "s",
+        Callback = function(Value)
+            State.AutoKickPostDelay = Value
+        end,
+    })
 
     AddSection(Groups.Farm.Collect, "Collection")
+
+    GetPlayerPlot()
 
     Groups.Farm.Collect:AddToggle("AutoCollectToggle", {
         Text = "Auto Collect",
@@ -2822,6 +3244,16 @@ Groups.Farm.Squat:AddToggle("AutoBonusFarmToggle", {
         end,
     })
 
+    Groups.Farm.Collect:AddInput("FarmCollectIntervalInput", {
+        Default = tostring(State.AutoCollectInterval or 300),
+        Numeric = true,
+        Finished = true,
+        Text = "Collect Interval Seconds",
+        Callback = function(Value)
+            State.AutoCollectInterval = math.clamp(tonumber(Value) or 300, 5, 3600)
+        end,
+    })
+
     Groups.Farm.Collect:AddButton({
         Text = "Collect Once",
         Func = function()
@@ -2831,36 +3263,84 @@ Groups.Farm.Squat:AddToggle("AutoBonusFarmToggle", {
             local Amount = CollectAllButtons()
             State.AutoCollect = Old
 
-            Library:Notify({ Title = "Auto Collect", Description = "Collected " .. tostring(Amount) .. " buttons.", Time = 3 })
-        end,
-    })
-
-    Groups.Farm.Collect:AddButton({
-        Text = "Detect Plot",
-        Func = function()
-            local Plot = GetPlayerPlot()
-
             Library:Notify({
-                Title = "Plot Detection",
-                Description = Plot and ("Detected: " .. Plot.Name) or "No plot found.",
+                Title = "Auto Collect",
+                Description = "Collected " .. tostring(Amount) .. " buttons.",
                 Time = 3,
             })
         end,
     })
 
-    AddInfoBlock(Groups.Farm.Help, "Farm Controller Order", {
-        "1. Keep squat tool equipped",
-        "2. Run bonus click",
-        "3. Process kick cycle",
-        "4. Run auto collect",
-        "5. Process upgrades and rebirth",
+    AddSection(Groups.Farm.UpgradePage, "Upgrade Controls")
+
+    Groups.Farm.UpgradePage:AddToggle("AutoPlotUpgradeToggle", {
+        Text = "Auto Plot Upgrade",
+        Default = false,
+        Callback = function(Value)
+            State.AutoPlotUpgrade = Value
+            if Value then StartFarmController() end
+        end,
     })
 
-    AddInfoBlock(Groups.Farm.Notes, "Farm Notes", {
-        "Use Start Enabled Farm after choosing toggles.",
-        "Stop All Features clears every farm toggle.",
-        "Collect uses the detected plot owner text.",
+    Groups.Farm.UpgradePage:AddToggle("AutoSlotUpgradeToggle", {
+        Text = "Auto Slot Upgrade",
+        Default = false,
+        Callback = function(Value)
+            State.AutoSlotUpgrade = Value
+            if Value then StartFarmController() end
+        end,
     })
+
+    Groups.Farm.UpgradePage:AddToggle("AutoRebirthToggle", {
+        Text = "Auto Rebirth",
+        Default = false,
+        Risky = true,
+        Callback = function(Value)
+            State.AutoRebirth = Value
+            if Value then StartFarmController() end
+        end,
+    })
+
+    Groups.Farm.UpgradePage:AddButton({ Text = "Upgrade Plot Once", Func = function() FirePlotUpgrade() end })
+    Groups.Farm.UpgradePage:AddButton({ Text = "Rebirth Once", DoubleClick = true, Func = function() FireRebirth() end })
+
+    AddSection(Groups.Farm.RuntimePage, "Run Time Minutes")
+    Groups.Farm.RuntimePage:AddLabel("0 minutes means one pass, then it moves to the next ordered step.", true)
+
+    local RuntimeInputs = {
+        { "Squat", "Squat Minutes" },
+        { "Kick", "Kick Minutes" },
+        { "Collect", "Collect Minutes" },
+        { "PlotUpgrade", "Plot Upgrade Minutes" },
+        { "SlotUpgrade", "Slot Upgrade Minutes" },
+        { "Webhook", "Webhook Minutes" },
+        { "Rebirth", "Rebirth Minutes" },
+    }
+
+    for _, Data in ipairs(RuntimeInputs) do
+        local FeatureName = Data[1]
+        local Text = Data[2]
+
+        Groups.Farm.RuntimePage:AddInput("Public" .. FeatureName .. "MinutesInput", {
+            Default = tostring(State.FeatureRunMinutes[FeatureName] or 0),
+            Numeric = true,
+            Finished = true,
+            Text = Text,
+            Callback = function(Value)
+                SetFeatureRunMinutes(FeatureName, Value)
+            end,
+        })
+    end
+
+    AddInfoBlock(Groups.Farm.Help, "How The Farm Runs", {
+        "Use the page buttons to edit each farm feature.",
+        "Order Builder controls which feature runs first, second, and so on.",
+        "Kick and collect cannot run at the same time.",
+        "Bonus is not an ordered step. It clicks while Auto Squat is active.",
+        "Step buttons open the feature page based on your current order.",
+    })
+
+    SwitchFarmPage("Status")
 end
 
 --==================================================
@@ -3973,6 +4453,54 @@ local function BuildAdvancedFarmPanel(TargetTab, PanelName)
         end,
     })
 
+    AddSection(Adv.Profile, "Farm Order")
+
+    local OrderPreview = Adv.Profile:AddLabel("Order:\n" .. GetFarmOrderText(), true)
+
+    local function RefreshOrderPreview()
+        SetLabel(OrderPreview, "Order:\n" .. GetFarmOrderText())
+        Refresh()
+    end
+
+    for SlotIndex = 1, 8 do
+        Adv.Profile:AddDropdown(PanelName .. "OrderSlot" .. tostring(SlotIndex), {
+            Values = FarmFeatureList,
+            Default = State.FarmOrder and State.FarmOrder[SlotIndex] or FarmFeatureList[SlotIndex],
+            Multi = false,
+            Text = "Step " .. tostring(SlotIndex),
+            Callback = function(Value)
+                SetFarmOrderSlot(SlotIndex, Value)
+                RefreshOrderPreview()
+            end,
+        })
+    end
+
+    Adv.Profile:AddButton({
+        Text = "Reset Order",
+        Func = function()
+            State.FarmOrder = {
+                "Squat",
+                "Bonus",
+                "Kick",
+                "Collect",
+                "PlotUpgrade",
+                "SlotUpgrade",
+                "Webhook",
+                "Rebirth",
+            }
+
+            State.FarmOrderIndex = 1
+
+            for Index, FeatureName in ipairs(State.FarmOrder) do
+                pcall(function()
+                    Options[PanelName .. "OrderSlot" .. tostring(Index)]:SetValue(FeatureName)
+                end)
+            end
+
+            RefreshOrderPreview()
+        end,
+    })
+
     Adv.Profile:AddButton({
         Text = "Start Selected Profile",
         Func = function()
@@ -4514,156 +5042,160 @@ local function BuildKeyTab()
         return
     end
 
-    local AccessMain = Tabs.Key:AddLeftGroupbox("Access Login", "key-round")
-    local AccessTools = Tabs.Key:AddLeftGroupbox("Access Tools", "wrench")
-    local AccessStatus = Tabs.Key:AddRightGroupbox("Access Status", "shield-check")
-    local AccessInfo = Tabs.Key:AddRightGroupbox("What Unlocks", "info")
+    local PendingAccess = {
+        Checked = false,
+        Valid = false,
+        Level = "None",
+        Reason = "No key checked yet.",
+    }
 
-    Labels.AccessStatus = AccessStatus:AddLabel("Status: waiting for key", true)
-    Labels.AccessLoaded = AccessStatus:AddLabel("Loaded: none", true)
-
-    AccessStatus:AddDivider()
-    AccessStatus:AddLabel("Username: " .. LocalPlayer.Name)
-    AccessStatus:AddLabel("Display: " .. LocalPlayer.DisplayName)
-    AccessStatus:AddLabel("UserId: " .. tostring(LocalPlayer.UserId))
-    AccessStatus:AddLabel("Access: " .. GetAccessLevel())
-    AccessStatus:AddLabel("Dev Whitelist: " .. tostring(IsDevUser()))
-    AccessStatus:AddLabel("Tester Whitelist: " .. tostring(IsTesterUser()))
-
-    AccessMain:AddLabel("Enter your access key, then press submit.", true)
-    AccessMain:AddDivider()
-
-    AccessMain:AddInput("AccessKeyInput", {
-        Default = "",
-        Numeric = false,
-        Finished = true,
-        Text = "Access Key",
-        Placeholder = "enter key...",
-    })
-
-    local function SubmitAccessKey(Key)
-        Key = tostring(Key or "")
-
-        if Key == Config.DevKey then
-            if not IsDevUser() then
-                SetLabel(Labels.AccessStatus, "Status: dev key denied")
-                Library:Notify({
-                    Title = "Access Denied",
-                    Description = "Your UserId is not whitelisted for developer access.",
-                    Time = 5,
-                })
-                return
-            end
-
-            LoadDevTab()
-            LoadTestingTab()
-            SetLabel(Labels.AccessStatus, "Status: developer unlocked")
-            SetLabel(Labels.AccessLoaded, "Loaded: dev + tester")
+    local function BuildAccessReviewTab()
+        if Tabs.AccessReview then
             return
         end
 
-        if Key == Config.TesterKey then
-            if not IsTesterUser() then
-                SetLabel(Labels.AccessStatus, "Status: tester key denied")
-                Library:Notify({
-                    Title = "Access Denied",
-                    Description = "Your UserId is not whitelisted for tester access.",
-                    Time = 5,
-                })
-                return
-            end
+        Tabs.AccessReview = Window:AddTab("Access Review", "shield-question")
 
-            LoadTestingTab()
-            SetLabel(Labels.AccessStatus, "Status: tester unlocked")
-            SetLabel(Labels.AccessLoaded, "Loaded: tester")
-            return
-        end
+        local ReviewMain = Tabs.AccessReview:AddLeftGroupbox("Key Check Process", "key-round")
+        local ReviewGrant = Tabs.AccessReview:AddRightGroupbox("Grant Access", "badge-check")
+        local ReviewInfo = Tabs.AccessReview:AddRightGroupbox("Review Details", "info")
 
-        SetLabel(Labels.AccessStatus, "Status: invalid key")
-        Library:Notify({
-            Title = "Invalid Key",
-            Description = "The key you entered is incorrect.",
-            Time = 5,
+        Labels.KeyCheckStatus = ReviewMain:AddLabel("Status: waiting for key check", true)
+        Labels.KeyCheckSteps = ReviewMain:AddLabel("Steps:\n1. no key submitted yet", true)
+        Labels.KeyCheckResult = ReviewGrant:AddLabel("Result: locked", true)
+
+        ReviewGrant:AddButton({
+            Text = "Grant Checked Access",
+            DoubleClick = true,
+            Func = function()
+                if not PendingAccess.Checked then
+                    Library:Notify({
+                        Title = "Access",
+                        Description = "Submit a key first.",
+                        Time = 4,
+                    })
+                    return
+                end
+
+                if not PendingAccess.Valid then
+                    Library:Notify({
+                        Title = "Access Denied",
+                        Description = PendingAccess.Reason,
+                        Time = 5,
+                    })
+                    return
+                end
+
+                if PendingAccess.Level == "Dev" then
+                    LoadDevTab()
+                    LoadTestingTab()
+                elseif PendingAccess.Level == "Tester" then
+                    LoadTestingTab()
+                end
+
+                SetLabel(Labels.KeyCheckResult, "Result: granted " .. tostring(PendingAccess.Level))
+            end,
+        })
+
+        ReviewGrant:AddButton({
+            Text = "Copy Check Result",
+            Func = function()
+                SafeClipboard(table.concat({
+                    "Checked: " .. tostring(PendingAccess.Checked),
+                    "Valid: " .. tostring(PendingAccess.Valid),
+                    "Level: " .. tostring(PendingAccess.Level),
+                    "Reason: " .. tostring(PendingAccess.Reason),
+                    "UserId: " .. tostring(LocalPlayer.UserId),
+                }, "\n"))
+            end,
+        })
+
+        AddInfoBlock(ReviewInfo, "How It Works", {
+            "Submit key only runs checks.",
+            "This review tab shows the process.",
+            "Grant button unlocks tabs after validation.",
+            "UserId whitelist is checked before access loads.",
         })
     end
 
-    AccessMain:AddButton({
-        Text = "Submit Key",
-        Func = function()
-            SubmitAccessKey(Options.AccessKeyInput and Options.AccessKeyInput.Value or "")
-        end,
+    Tabs.Key:AddLabel({
+        Text = "Access System",
+        DoesWrap = true,
+        Size = 18,
     })
 
-    AccessMain:AddButton({
-        Text = "Load My Access",
-        Func = function()
+    Tabs.Key:AddLabel({
+        Text = "Submit key only checks access. It does not unlock tabs yet.\nAfter the check, open Access Review and press Grant Checked Access.",
+        DoesWrap = true,
+        Size = 14,
+    })
+
+    Tabs.Key:AddLabel({
+        Text = "User: " .. LocalPlayer.Name
+            .. "\nUserId: " .. tostring(LocalPlayer.UserId)
+            .. "\nDetected: " .. GetAccessLevel()
+            .. "\nDev Whitelist: " .. tostring(IsDevUser())
+            .. "\nTester Whitelist: " .. tostring(IsTesterUser()),
+        DoesWrap = true,
+        Size = 14,
+    })
+
+    Tabs.Key:AddKeyBox(function(ReceivedKey)
+        BuildAccessReviewTab()
+
+        PendingAccess.Checked = true
+        PendingAccess.Valid = false
+        PendingAccess.Level = "None"
+        PendingAccess.Reason = "Invalid key."
+
+        local Steps = {
+            "1. key received",
+            "2. checking key type",
+        }
+
+        if ReceivedKey == Config.DevKey then
+            table.insert(Steps, "3. dev key matched")
+            table.insert(Steps, "4. checking developer whitelist")
+
             if IsDevUser() then
-                LoadDevTab()
-                LoadTestingTab()
-                SetLabel(Labels.AccessStatus, "Status: developer auto-loaded")
-                SetLabel(Labels.AccessLoaded, "Loaded: dev + tester")
-            elseif IsTesterUser() then
-                LoadTestingTab()
-                SetLabel(Labels.AccessStatus, "Status: tester auto-loaded")
-                SetLabel(Labels.AccessLoaded, "Loaded: tester")
+                PendingAccess.Valid = true
+                PendingAccess.Level = "Dev"
+                PendingAccess.Reason = "Developer key and UserId are valid."
+                table.insert(Steps, "5. developer whitelist valid")
+                table.insert(Steps, "6. ready to grant access")
             else
-                SetLabel(Labels.AccessStatus, "Status: no whitelist")
-                Library:Notify({
-                    Title = "Access Denied",
-                    Description = "Your UserId is not whitelisted.",
-                    Time = 5,
-                })
+                PendingAccess.Reason = "Your UserId is not whitelisted for developer access."
+                table.insert(Steps, "5. developer whitelist failed")
             end
-        end,
-    })
+        elseif ReceivedKey == Config.TesterKey then
+            table.insert(Steps, "3. tester key matched")
+            table.insert(Steps, "4. checking tester whitelist")
 
-    AddSection(AccessTools, "Utilities")
+            if IsTesterUser() then
+                PendingAccess.Valid = true
+                PendingAccess.Level = "Tester"
+                PendingAccess.Reason = "Tester key and UserId are valid."
+                table.insert(Steps, "5. tester whitelist valid")
+                table.insert(Steps, "6. ready to grant access")
+            else
+                PendingAccess.Reason = "Your UserId is not whitelisted for tester access."
+                table.insert(Steps, "5. tester whitelist failed")
+            end
+        else
+            table.insert(Steps, "3. key did not match dev/tester keys")
+            table.insert(Steps, "4. access denied")
+        end
 
-    AccessTools:AddButton({
-        Text = "Copy UserId",
-        Func = function()
-            SafeClipboard(tostring(LocalPlayer.UserId))
-        end,
-    })
+        SetLabel(Labels.KeyCheckStatus, "Status: " .. (PendingAccess.Valid and "valid" or "invalid"))
+        SetLabel(Labels.KeyCheckSteps, "Steps:\n" .. table.concat(Steps, "\n"))
+        SetLabel(Labels.KeyCheckResult, "Result: " .. (PendingAccess.Valid and ("ready for " .. PendingAccess.Level) or PendingAccess.Reason))
 
-    AccessTools:AddButton({
-        Text = "Copy Access Debug",
-        Func = function()
-            SafeClipboard(table.concat({
-                "Username: " .. LocalPlayer.Name,
-                "Display: " .. LocalPlayer.DisplayName,
-                "UserId: " .. tostring(LocalPlayer.UserId),
-                "Access: " .. GetAccessLevel(),
-                "DevUser: " .. tostring(IsDevUser()),
-                "TesterUser: " .. tostring(IsTesterUser()),
-                "DevLoaded: " .. tostring(DevUnlocked),
-                "TesterLoaded: " .. tostring(TesterUnlocked),
-                "Version: " .. tostring(Config.Version),
-            }, "\n"))
-        end,
-    })
-
-    AccessTools:AddButton({
-        Text = "Unload Access Tabs",
-        DoubleClick = true,
-        Func = function()
-            Library:Notify({
-                Title = "Access",
-                Description = "Reload the script to fully remove loaded access tabs.",
-                Time = 4,
-            })
-        end,
-    })
-
-    AddInfoBlock(AccessInfo, "Developer", {
-        "Loads dev hub, advanced farm, rules, and debug tools.",
-        "Also loads tester tools for shared testing.",
-    })
-
-    AddInfoBlock(AccessInfo, "Tester", {
-        "Loads tester hub, advanced farm, rules, and debug tools.",
-        "Used for safer farming profiles and timed checks.",
-    })
+        Library:Notify({
+            Title = "Key Checked",
+            Description = PendingAccess.Valid and "Access Review is ready. Press Grant Checked Access." or PendingAccess.Reason,
+            Time = 5,
+        })
+    end)
 end
 
 --==================================================
@@ -4671,10 +5203,72 @@ end
 --==================================================
 
 local function BuildSettings()
+    Groups.Settings.Discord = Tabs.Settings:AddLeftGroupbox("Discord", "message-circle")
     Groups.Settings.Window = Tabs.Settings:AddLeftGroupbox("Window", "panel-top")
     Groups.Settings.Performance = Tabs.Settings:AddRightGroupbox("Performance", "activity")
     Groups.Settings.Notifications = Tabs.Settings:AddRightGroupbox("Notifications", "bell")
     Groups.Settings.Config = Tabs.Settings:AddRightGroupbox("Config", "folder-cog")
+
+    local function RunDiscordInvite()
+        local InviteCode = "CjgZmnrhpk"
+        local InviteLink = "https://discord.gg/" .. InviteCode
+        local Request = request or http_request or (syn and syn.request)
+
+        pcall(function()
+            if setclipboard then
+                setclipboard(InviteLink)
+            end
+        end)
+
+        pcall(function()
+            if Request then
+                Request({
+                    Url = "http://127.0.0.1:6463/rpc?v=1",
+                    Method = "POST",
+                    Headers = {
+                        ["Content-Type"] = "application/json",
+                        ["Origin"] = "https://discord.com",
+                    },
+                    Body = HttpService:JSONEncode({
+                        cmd = "INVITE_BROWSER",
+                        args = {
+                            code = InviteCode,
+                        },
+                        nonce = HttpService:GenerateGUID(false),
+                    }),
+                })
+            end
+        end)
+    end
+
+    Groups.Settings.Discord:AddToggle("DiscordAutoInv", {
+        Text = "Discord Auto Invite",
+        Default = true,
+        Callback = function(Value)
+            if Value then
+                RunDiscordInvite()
+            end
+        end,
+    })
+
+    Groups.Settings.Discord:AddButton({
+        Text = "Open Discord Invite",
+        Func = function()
+            RunDiscordInvite()
+
+            Library:Notify({
+                Title = "Discord",
+                Description = "Invite copied/opened.",
+                Time = 3,
+            })
+        end,
+    })
+
+    task.delay(1, function()
+        if Toggles.DiscordAutoInv and Toggles.DiscordAutoInv.Value then
+            RunDiscordInvite()
+        end
+    end)
 
     local VisibilityToggle = Groups.Settings.Window:AddToggle("ToggleUIVisibility", {
         Text = "ui visible",
